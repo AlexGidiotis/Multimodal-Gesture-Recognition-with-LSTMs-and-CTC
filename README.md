@@ -13,7 +13,9 @@ In order to train the models provided here you need to preprocess the data:
 3) For the skeletal features you should provide the joint positions for each file in one csv file each and run the following scripts:
 
 	a) extract_activity_feats.py
+
 	b) gather_skeletal.py
+	
 	c) skeletal_feature_extraction.py
 
 4) Now you are ready to train the skeletal lstm network.
