@@ -27,3 +27,17 @@ In order to train the models provided here you need to preprocess the data:
 6) Use the sequence_decoding.py script to evaluate the trained model with test data.
 
 The training of the complete system takes approximately 80 hours in an nvidia 1060 gtx.
+
+Dependencies:
+
+1) numpy
+
+2) pandas
+
+3) tensorflow
+
+4) keras
+
+5) sklearn
+
+6) scipy
