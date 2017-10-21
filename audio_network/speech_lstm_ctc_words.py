@@ -296,13 +296,13 @@ input_noise = GaussianNoise(stddev=0.5)(input_data)
 # We add dropout to the inputs but not to the recurrent connections.
 # We use kernel constraints to make the weights smaller.
 lstm_1 = Bidirectional(LSTM(500, name='blstm_1', activation='tanh', recurrent_activation='hard_sigmoid', recurrent_dropout=0.0, dropout=0.6, 
-			kernel_constraint=maxnorm(10), kernel_initializer=uni_initializer, return_sequences=True), merge_mode='concat')(input_noise)
+			kernel_constraint=maxnorm(3), kernel_initializer=uni_initializer, return_sequences=True), merge_mode='concat')(input_noise)
 
 # Block 2
 # We add dropout to the inputs but not to the recurrent connections.
 # We use kernel constraints to make the weights smaller.
 lstm_2 = Bidirectional(LSTM(500, name='blstm_2', activation='tanh', recurrent_activation='hard_sigmoid', recurrent_dropout=0.0, dropout=0.6,
-			kernel_constraint=maxnorm(10), kernel_initializer=uni_initializer, return_sequences=True), merge_mode='concat')(lstm_1)
+			kernel_constraint=maxnorm(3), kernel_initializer=uni_initializer, return_sequences=True), merge_mode='concat')(lstm_1)
 
 
 # The block can be residual. Makes the training a little bit easier.

@@ -407,7 +407,7 @@ merged = Merge([model_a, model_s], mode='concat')([res_a_1,res_s_1])
 
 # Block 3
 lstm_3 = Bidirectional(LSTM(100, name='blstm_2', activation='tanh', recurrent_activation='hard_sigmoid', recurrent_dropout=0.0, dropout=0.5,
-			kernel_constraint=maxnorm(10), kernel_initializer='glorot_uniform', return_sequences=True), merge_mode='concat')(merged)
+			kernel_constraint=maxnorm(3), kernel_initializer='glorot_uniform', return_sequences=True), merge_mode='concat')(merged)
 
 
 dropout_3 = Dropout(0.6, name='dropout_layer_3')(lstm_3)

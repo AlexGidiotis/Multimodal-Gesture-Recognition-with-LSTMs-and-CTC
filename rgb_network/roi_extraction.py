@@ -15,7 +15,6 @@ validation_out_path = '/home/alex/Documents/Data/validation_up_body_images'
 #=========================================================== Definitions ====================================================
 def extract_body(df,video_path,out_path):
 	for c, vfile in enumerate(sorted(os.listdir(video_path))):
-		if c > 1 : break
 		# Ignore other files.
 		if vfile[-4:] != '.mp4':
 			continue
