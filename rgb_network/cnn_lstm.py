@@ -4,13 +4,17 @@ import pandas as pd
 import numpy as np
 
 from keras.models import Model
-from keras.layers import Dense, Dropout, Activation, Flatten, add
+from keras.layers import Dense, Dropout, Activation, Flatten, add, Lambda
 from keras.layers import Convolution2D, MaxPooling2D, LSTM, Input
 from keras.layers.wrappers import TimeDistributed, Bidirectional
 from keras.constraints import maxnorm
 from keras.initializers import RandomUniform
 from keras.preprocessing.image import ImageDataGenerator
 from keras import callbacks
+from keras.callbacks import EarlyStopping, ModelCheckpoint
+from keras.layers.normalization import BatchNormalization
+from keras import backend as K
+from keras.optimizers import Adam
 
 #========================================================= Global variables =================================================
 train_path = '/home/alex/Documents/Data/training_up_body_images'
@@ -19,7 +23,24 @@ validation_path = '/home/alex/Documents/Data/validation_up_body_images'
 seq_len,img_x,img_y = 1200,64,64
 nb_classes = 22
 input_shape = (seq_len,img_x,img_y,1)
+absolute_max_sequence_len = 28
+stamp = 'cnn_lstm'
+
+
 #=========================================================== Definitions ====================================================
+# the actual loss calc occurs here despite it not being
+# an internal Keras loss function
+def ctc_lambda_func(args):
+	y_pred, labels, input_length, label_length = args
+	# the 2 is critical here since the first couple outputs of the RNN
+	# tend to be garbage:
+	y_pred = y_pred[:, 2:, :]
+
+	ctc_batch_loss = K.ctc_batch_cost(labels, y_pred, input_length, label_length)
+
+	return ctc_batch_loss
+
+
 def build_net():
 
 	uni_initializer = RandomUniform(minval=-0.05, maxval=0.05, seed=47)
@@ -109,7 +130,55 @@ def build_net():
 	y_pred = Activation('softmax',
 		name='softmax')(inner)
 
-	Model(input=[input_layer], output=y_pred).summary()
+	Model(inputs=[input_layer], outputs=y_pred).summary()
+
+	labels = Input(name='the_labels',
+		shape=[absolute_max_sequence_len],
+		dtype='float32')
+	input_length = Input(name='input_length',
+		shape=[1],
+		dtype='int64')
+	label_length = Input(name='label_length',
+		shape=[1],
+		dtype='int64')
+
+	# ================================================= COMPILE THE MODEL ==================================================================================
+	# Keras doesn't currently support loss funcs with extra parameters
+	# so CTC loss is implemented in a lambda layer
+	# The extra parameters required for ctc is a label sequence (list), input sequence length, and label sequence length.
+	loss_out = Lambda(ctc_lambda_func,
+		output_shape=(1,),
+		name="ctc")([y_pred, labels, input_length, label_length])
+
+	model = Model(inputs=[input_layer, labels, input_length, label_length],
+		outputs=[loss_out])
+
+	# Optimizer.
+	# Clipping the gradients to have smaller values makes the training smoother.
+	adam = Adam(lr=0.0001,
+		clipvalue=0.5)
+
+	# the loss calc occurs elsewhere, so use a dummy lambda func for the loss
+	model.compile(loss={'ctc': lambda y_true, y_pred: y_pred},
+		optimizer=adam)
+
+	# Save the model.
+	model_json = model.to_json()
+	with open(stamp + ".json", "w") as json_file:
+	    json_file.write(model_json)
+
+	# Early stopping to avoid overfitting.
+	earlystopping = EarlyStopping(monitor='val_loss',
+		patience=20,
+		verbose=1)
+	# Checkpoint to save the weights with the best validation accuracy.
+	best_model_path = stamp + ".h5"
+	checkpoint = ModelCheckpoint(best_model_path,
+		monitor='val_loss',
+		verbose=1,
+		save_best_only=True,
+		save_weights_only=True,
+		mode='auto')
 
 	return model
 
