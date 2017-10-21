@@ -1,24 +1,25 @@
 # Trains a Bidirectional RNN with LSTM to recognise continuous gesture sequences from audio input.
 # THis is a word level recognition network.
-
+import time
+import itertools
 import random
+
 import numpy as np
 import pandas as pd
-from keras.preprocessing import sequence
+from sklearn import preprocessing
 from sklearn.model_selection import train_test_split
+
+from keras.preprocessing import sequence
 from keras.utils import np_utils
 from keras.models import Sequential
 from keras.layers import Dense, Activation, Dropout, LSTM, Input, Lambda, TimeDistributed
 from keras.callbacks import EarlyStopping, ModelCheckpoint
 from keras.layers.normalization import BatchNormalization
 from keras.models import Model
-import time
 from keras.layers.wrappers import Bidirectional
 from keras import backend as K
 from keras.optimizers import RMSprop, Adam
 import keras.callbacks
-from sklearn import preprocessing
-import itertools
 from keras.models import load_model
 from keras.models import model_from_json
 from keras.constraints import maxnorm
@@ -33,8 +34,13 @@ from keras.initializers import RandomUniform
 # Class constructor to initialize the datagenerator object.
 class DataGenerator(keras.callbacks.Callback):
 
-	def __init__(self, minibatch_size, numfeats,maxlen,val_split,nb_classes,
-				 absolute_max_sequence_len=125):
+	def __init__(self,
+		minibatch_size,
+		numfeats,
+		maxlen,
+		val_split,
+		nb_classes,
+		absolute_max_sequence_len=125):
 
 		# Currently is only 2 files per batch.
 		self.minibatch_size = minibatch_size
@@ -63,7 +69,8 @@ class DataGenerator(keras.callbacks.Callback):
 		# THe audio data path.
 		in_file = '/home/alex/Documents/Python/multimodal_gesture_recognition/speech_blstm/Training_set_audio_labeled.csv'
 
-		self.df = pd.read_csv(in_file, header=None)
+		self.df = pd.read_csv(in_file,
+			header=None)
 
 		# Zero mean and unity variance normalization.
 		self.df = self.normalize_data()
@@ -184,8 +191,12 @@ class DataGenerator(keras.callbacks.Callback):
 			# Downsample by 5 the audio.
 			vf = vf.iloc[::5, :].reset_index(drop=True)
 			# SElect and pad data sequence to max length.
-			gest_seq = vf.drop([39,40], axis=1).as_matrix().astype(float)
-			gest_seq = sequence.pad_sequences([gest_seq], maxlen=self.maxlen, padding='post', truncating='post', dtype='float32')
+			gest_seq = vf.drop([39,40],axis=1).as_matrix().astype(float)
+			gest_seq = sequence.pad_sequences([gest_seq],
+				maxlen=self.maxlen,
+				padding='post',
+				truncating='post',
+				dtype='float32')
 			
 			# Create the label vector. Ignores the blanks.
 			lab_seq = vf[vf[40] != 0][40].unique().astype('float32')
@@ -198,14 +209,20 @@ class DataGenerator(keras.callbacks.Callback):
 
 			# If a sequence is not found insert a blank example and pad.
 			if lab_seq.shape[0] == 0:
-				lab_seq = sequence.pad_sequences([self.blank_label], maxlen=(self.absolute_max_sequence_len), padding='post', value=-1)
+				lab_seq = sequence.pad_sequences([self.blank_label],
+					maxlen=(self.absolute_max_sequence_len),
+					padding='post',
+					value=-1)
 				labels[i, :] = lab_seq
 				label_length[i] = 1
 			# Else use the save the returned variables.
 			else:
 				X_data[i, :, :] = gest_seq
 				label_length[i] = lab_seq.shape[0]
-				lab_seq = sequence.pad_sequences([lab_seq], maxlen=(self.absolute_max_sequence_len), padding='post', value=-1)
+				lab_seq = sequence.pad_sequences([lab_seq],
+					maxlen=(self.absolute_max_sequence_len),
+					padding='post',
+					value=-1)
 				labels[i, :] = lab_seq
 
 			input_length[i] = (X_data[i].shape[0] - 2)
@@ -277,16 +294,24 @@ nb_classes = 44
 nb_epoch = 150
 numfeats = 39
 
-uni_initializer = RandomUniform(minval=-0.05, maxval=0.05, seed=47)
+uni_initializer = RandomUniform(minval=-0.05,
+	maxval=0.05,
+	seed=47)
 # Can load a previous model to resume training. 'yes'.
 load_previous = raw_input("Load previous model? ")
 # Create data generator object.
-data_gen = DataGenerator(minibatch_size=minibatch_size, numfeats=numfeats, maxlen=maxlen, val_split=val_split, nb_classes=nb_classes)
+data_gen = DataGenerator(minibatch_size=minibatch_size,
+	numfeats=numfeats,
+	maxlen=maxlen,
+	val_split=val_split,
+	nb_classes=nb_classes)
 
 # Shape of the network input.
 input_shape = (maxlen, numfeats)
 
-input_data = Input(name='the_input', shape=input_shape, dtype='float32')
+input_data = Input(name='the_input',
+	shape=input_shape,
+	dtype='float32')
 
 # Add noise as a regularizer. Increasing the standard deviation of the noise makes the inputs noisier.
 input_noise = GaussianNoise(stddev=0.5)(input_data)
@@ -295,46 +320,77 @@ input_noise = GaussianNoise(stddev=0.5)(input_data)
 # Block 1
 # We add dropout to the inputs but not to the recurrent connections.
 # We use kernel constraints to make the weights smaller.
-lstm_1 = Bidirectional(LSTM(500, name='blstm_1', activation='tanh', recurrent_activation='hard_sigmoid', recurrent_dropout=0.0, dropout=0.6, 
-			kernel_constraint=maxnorm(3), kernel_initializer=uni_initializer, return_sequences=True), merge_mode='concat')(input_noise)
+lstm_1 = Bidirectional(LSTM(500,
+	name='blstm_1',
+	activation='tanh',
+	recurrent_activation='hard_sigmoid',
+	recurrent_dropout=0.0,
+	dropout=0.6, 
+	kernel_constraint=maxnorm(3),
+	kernel_initializer=uni_initializer,
+	return_sequences=True),
+	merge_mode='concat')(input_noise)
 
 # Block 2
 # We add dropout to the inputs but not to the recurrent connections.
 # We use kernel constraints to make the weights smaller.
-lstm_2 = Bidirectional(LSTM(500, name='blstm_2', activation='tanh', recurrent_activation='hard_sigmoid', recurrent_dropout=0.0, dropout=0.6,
-			kernel_constraint=maxnorm(3), kernel_initializer=uni_initializer, return_sequences=True), merge_mode='concat')(lstm_1)
+lstm_2 = Bidirectional(LSTM(500,
+	name='blstm_2',
+	activation='tanh',
+	recurrent_activation='hard_sigmoid',
+	recurrent_dropout=0.0,
+	dropout=0.6,
+	kernel_constraint=maxnorm(3),
+	kernel_initializer=uni_initializer,
+	return_sequences=True),
+	merge_mode='concat')(lstm_1)
 
 
 # The block can be residual. Makes the training a little bit easier.
 res_block = layers.add([lstm_1, lstm_2])
 
 # More dropout will help regularization.
-dropout_1 = Dropout(0.6, name='dropout_layer_1')(res_block)
+dropout_1 = Dropout(0.6,
+	name='dropout_layer_1')(res_block)
 
 # Softmax output layers
 # Block 3
 # Predicts a class probability distribution at every time step.
-inner = Dense(nb_classes, name='dense_1', kernel_initializer=uni_initializer)(dropout_1) 
-y_pred = Activation('softmax', name='softmax')(inner)
+inner = Dense(nb_classes,
+	name='dense_1',
+	kernel_initializer=uni_initializer)(dropout_1) 
+y_pred = Activation('softmax',
+	name='softmax')(inner)
 
-Model(input=[input_data], output=y_pred).summary()
+Model(input=[input_data],
+	output=y_pred).summary()
 
 #===================================================== LABELS ==========================================================================================
-labels = Input(name='the_labels', shape=[data_gen.absolute_max_sequence_len], dtype='float32')
-input_length = Input(name='input_length', shape=[1], dtype='int64')
-label_length = Input(name='label_length', shape=[1], dtype='int64')
+labels = Input(name='the_labels',
+	shape=[data_gen.absolute_max_sequence_len],
+	dtype='float32')
+input_length = Input(name='input_length',
+	shape=[1],
+	dtype='int64')
+label_length = Input(name='label_length',
+	shape=[1],
+	dtype='int64')
 
 # ================================================= COMPILE THE MODEL ==================================================================================
 # Keras doesn't currently support loss funcs with extra parameters
 # so CTC loss is implemented in a lambda layer
 # The extra parameters required for ctc is a label sequence (list), input sequence length, and label sequence length.
-loss_out = Lambda(ctc_lambda_func, output_shape=(1,), name="ctc")([y_pred, labels, input_length, label_length])
+loss_out = Lambda(ctc_lambda_func,
+	output_shape=(1,),
+	name="ctc")([y_pred, labels, input_length, label_length])
 
-model = Model(input=[input_data, labels, input_length, label_length], output=[loss_out])
+model = Model(input=[input_data, labels, input_length, label_length],
+	output=[loss_out])
 
 # Optimizer.
 # Clipping the gradients to have smaller values makes the training smoother.
-adam = Adam(lr=0.0001, clipvalue=0.5)
+adam = Adam(lr=0.0001,
+	clipvalue=0.5)
 
 # Resume training.
 if load_previous == 'yes':
@@ -345,25 +401,37 @@ if load_previous == 'yes':
 	# load weights into new model
 	model.load_weights("sp_ctc_lstm_weights_best.h5")
 
-	adam = Adam(lr=0.0001, clipvalue=0.5)
+	adam = Adam(lr=0.0001,
+		clipvalue=0.5)
 	print("Loaded model from disk")
 
 # the loss calc occurs elsewhere, so use a dummy lambda func for the loss
-model.compile(loss={'ctc': lambda y_true, y_pred: y_pred}, optimizer=adam)
+model.compile(loss={'ctc': lambda y_true, y_pred: y_pred},
+	optimizer=adam)
 
 # Early stopping to avoid overfitting.
-earlystopping = EarlyStopping(monitor='val_loss', patience=20, verbose=1)
+earlystopping = EarlyStopping(monitor='val_loss',
+	patience=20,
+	verbose=1)
 # Checkpoint to save the weights with the best validation accuracy.
 filepath="sp_ctc_lstm_weights_best.h5"
-checkpoint = ModelCheckpoint(filepath, monitor='val_loss', verbose=1, save_best_only=True, save_weights_only=True, mode='auto')
+checkpoint = ModelCheckpoint(filepath,
+	monitor='val_loss',
+	verbose=1,
+	save_best_only=True,
+	save_weights_only=True,
+	mode='auto')
 
 # ====================================================== TRAIN =========================================================================================
 print 'Start training.'
 start_time = time.time()
 
-model.fit_generator(generator=data_gen.next_train(), steps_per_epoch=(data_gen.get_size(train=True)/minibatch_size),
-					epochs=nb_epoch, validation_data=data_gen.next_val(), validation_steps=(data_gen.get_size(train=False)/minibatch_size),
-					callbacks=[earlystopping, checkpoint, data_gen])
+model.fit_generator(generator=data_gen.next_train(),
+	steps_per_epoch=(data_gen.get_size(train=True)/minibatch_size),
+	epochs=nb_epoch,
+	validation_data=data_gen.next_val(),
+	validation_steps=(data_gen.get_size(train=False)/minibatch_size),
+	callbacks=[earlystopping, checkpoint, data_gen])
 
 #================================================================================================================================
 
