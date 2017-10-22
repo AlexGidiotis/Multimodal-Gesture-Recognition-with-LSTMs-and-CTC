@@ -18,6 +18,8 @@ from keras.layers.normalization import BatchNormalization
 from keras import backend as K
 from keras.optimizers import Adam
 from keras.preprocessing import sequence
+from keras.models import model_from_json
+
 
 #========================================================= Global variables =================================================
 train_path = '/home/alex/Documents/Data/training_up_body'
@@ -32,7 +34,7 @@ absolute_max_sequence_len = 28
 stamp = 'cnn_lstm'
 minibatch_size = 2
 val_split = 0.2
-nb_epoch = 1
+nb_epoch = 100
 
 
 #=========================================================== Definitions ====================================================
@@ -134,7 +136,7 @@ class DataGenerator(callbacks.Callback):
 		size = len(batch)
 
 		# INitialize the variables to be returned.
-		X_data = np.ones([size, self.maxlen, self.img_dim, self.img_dim, 1])
+		X_data = np.ones([size, self.maxlen, self.img_dim, self.img_dim, 1], dtype='float32')
 		labels = np.ones([size, self.absolute_max_sequence_len])
 		input_length = np.zeros([size, 1])
 		label_length = np.zeros([size, 1])
@@ -146,8 +148,6 @@ class DataGenerator(callbacks.Callback):
 			file_num = int(file[6:11])
 
 			gest_seq = np.load(file_path).astype(float)
-			# Normalize data 
-			gest_seq /= 255.
 			# Pad data sequence to max length.
 			gest_seq = sequence.pad_sequences([gest_seq],
 				maxlen=self.maxlen,
@@ -180,7 +180,9 @@ class DataGenerator(callbacks.Callback):
 				labels[i, :] = lab_seq
 
 			input_length[i] = (X_data[i].shape[0] - 2)
-
+		
+		# Normalize data 
+		X_data /= 255.
 		# Returned values: a dictionary with 4 values
 		#	the_input: data sequence
 		#	the labels: label sequence
@@ -355,11 +357,31 @@ def build_net():
 	return model
 
 
+def load_model():
+	json_file = open(stamp + '.json', 'r')
+	loaded_model_json = json_file.read()
+	json_file.close()
+	model = model_from_json(loaded_model_json)
+	# load weights into new model
+	model.load_weights(stamp + '.h5')
+
+	adam = Adam(lr=0.0001,
+		clipvalue=0.5)
+	print("Loaded model from disk")
+
+	model.compile(loss={'ctc': lambda y_true, y_pred: y_pred},
+		optimizer=adam)
+
+	return model
+
+
 #========================================================== Main function ===================================================
 # Choose between train and test mode. No difference between 
 # train and test data, just different paths.
 #mode = raw_input('Choose train or validation: ')
 mode = 'train'
+load_previous = raw_input('Type yes/no if you want to load previous model: ')
+
 print mode
 
 if mode == 'train':
@@ -377,14 +399,20 @@ data_gen = DataGenerator(minibatch_size=minibatch_size,
 	data_path=data_path,
 	lab_file=lab_file)
 
-model = build_net()
+
+# Resume training.
+if load_previous == 'yes':
+	model = load_model()
+else:
+	model = build_net()
+
 
 # Early stopping to avoid overfitting.
 earlystopping = EarlyStopping(monitor='val_loss',
 	patience=20,
 	verbose=1)
 # Checkpoint to save the weights with the best validation accuracy.
-best_model_path = stamp + ".h5"
+best_model_path = stamp + '.h5'
 checkpoint = ModelCheckpoint(best_model_path,
 	monitor='val_loss',
 	verbose=1,
