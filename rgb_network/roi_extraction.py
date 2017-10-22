@@ -12,9 +12,12 @@ validation_video_path = '/home/alex/Documents/Data/Test_Color_vid'
 train_out_path = '/home/alex/Documents/Data/training_up_body_images'
 validation_out_path = '/home/alex/Documents/Data/validation_up_body_images'
 
+img_dim = 64
+
 #=========================================================== Definitions ====================================================
 def extract_body(df,video_path,out_path):
 	for c, vfile in enumerate(sorted(os.listdir(video_path))):
+		if c > 1 : break
 		# Ignore other files.
 		if vfile[-4:] != '.mp4':
 			continue
@@ -27,7 +30,7 @@ def extract_body(df,video_path,out_path):
 		hipX, hipY, shcX, shcY = vf['hipX'].tolist(), vf['hipY'].tolist(), vf['shcX'].tolist(), vf['shcY'].tolist()
 		lhX, lhY, rhX, rhY = vf['lhX'].tolist(), vf['lhY'].tolist(), vf['rhX'].tolist(), vf['rhY'].tolist()
 
-
+		X_data = []
 		# Create video stream.
 		video = os.path.join(video_path,vfile)
 		cap = cv2.VideoCapture(video)
@@ -53,28 +56,34 @@ def extract_body(df,video_path,out_path):
 				crop_img = gray_img[up:down,left:right]
 
 				# Downsample to 64x64 pixels.
-				res_img = cv2.resize(crop_img,(64,64), interpolation = cv2.INTER_CUBIC)
-				out_name = vfile[:-4] + '_' + str(frame) + '.png'
-				out_file = os.path.join(out_path,out_name)
-				cv2.imwrite(out_file, res_img) 
+				res_img = cv2.resize(crop_img,(img_dim,img_dim), interpolation = cv2.INTER_CUBIC)
+				res_img = res_img.reshape([img_dim,img_dim,1])
+				X_data.append(res_img)
+				# out_name = vfile[:-4] + '_' + str(frame) + '.png'
+				# out_file = os.path.join(out_video_dir,out_name)
+				# cv2.imwrite(out_file, res_img) 
 			# If unable to use the skeletal info do this.
 			except:
 				crop_img = gray_img[0:330,0:640]
 
-				res_img = cv2.resize(crop_img,(64,64), interpolation = cv2.INTER_CUBIC)
-				out_name = vfile[:-4] + '_' + str(frame) + '.png'
-				out_file = os.path.join(out_path,out_name)
-				cv2.imwrite(out_file, res_img) 
+				res_img = cv2.resize(crop_img,(img_dim,img_dim), interpolation = cv2.INTER_CUBIC)
+				res_img = res_img.reshape([img_dim,img_dim,1])
+				X_data.append(res_img)
+				# out_name = vfile[:-4] + '_' + str(frame) + '.png'
+				# out_file = os.path.join(out_video_dir,out_name)
+				# cv2.imwrite(out_file, res_img) 
 
 			# INcrease the frame count.
 			frame += 1
-
+		X_data = np.array(X_data)
+		out_file = os.path.join()
+		np.save(out_file,X_data)
 	return 
 
 #========================================================== Main function ===================================================
 # Choose between train and test mode. No difference between train and test data, just different paths.
-mode = raw_input('Choose train or validation: ')
-
+#mode = raw_input('Choose train or validation: ')
+mode = 'train'
 print mode
 
 if mode == 'train':
