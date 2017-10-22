@@ -177,8 +177,6 @@ class DataGenerator(keras.callbacks.Callback):
 			lab_seq = vf[vf['labels'] != 0]['labels'].unique().astype('float32')
 			index = np.argwhere(lab_seq==0)
 			lab_seq = np.delete(lab_seq, index)
-			# Insert oovs between gesture labels. (did not improve things)
-			# lab_seq = np.insert(lab_seq, slice(1, None), 0)
 
 			# If a sequence is not found insert a blank example and pad.
 			if lab_seq.shape[0] == 0:
@@ -261,7 +259,7 @@ def ctc_lambda_func(args):
 
 # ====================================================== MAIN ==========================================================================================
 minibatch_size = 2
-val_split = 0.25
+val_split = 0.2
 maxlen = 1900
 nb_classes = 22
 nb_epoch = 150

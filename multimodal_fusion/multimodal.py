@@ -333,7 +333,7 @@ def layer_trainable(l, freeze, verbose=False, bidir_fix=True):
 
 # ====================================================== MAIN ==========================================================================================
 minibatch_size = 2
-val_split = 0.25
+val_split = 0.2
 maxlen = 1900
 nb_classes = 22
 nb_epoch = 150

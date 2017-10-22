@@ -9,15 +9,14 @@ train_file_skeletal = '/home/alex/Documents/Python/multimodal_gesture_recognitio
 validation_file_skeletal = '/home/alex/Documents/Python/multimodal_gesture_recognition/Validation_set_skeletal.csv'
 train_video_path = '/home/alex/Documents/Data/Color_vid'
 validation_video_path = '/home/alex/Documents/Data/Test_Color_vid'
-train_out_path = '/home/alex/Documents/Data/training_up_body_images'
-validation_out_path = '/home/alex/Documents/Data/validation_up_body_images'
+train_out_path = '/home/alex/Documents/Data/training_up_body'
+validation_out_path = '/home/alex/Documents/Data/validation_up_body'
 
 img_dim = 64
 
 #=========================================================== Definitions ====================================================
 def extract_body(df,video_path,out_path):
 	for c, vfile in enumerate(sorted(os.listdir(video_path))):
-		if c > 1 : break
 		# Ignore other files.
 		if vfile[-4:] != '.mp4':
 			continue
@@ -59,9 +58,6 @@ def extract_body(df,video_path,out_path):
 				res_img = cv2.resize(crop_img,(img_dim,img_dim), interpolation = cv2.INTER_CUBIC)
 				res_img = res_img.reshape([img_dim,img_dim,1])
 				X_data.append(res_img)
-				# out_name = vfile[:-4] + '_' + str(frame) + '.png'
-				# out_file = os.path.join(out_video_dir,out_name)
-				# cv2.imwrite(out_file, res_img) 
 			# If unable to use the skeletal info do this.
 			except:
 				crop_img = gray_img[0:330,0:640]
@@ -69,21 +65,21 @@ def extract_body(df,video_path,out_path):
 				res_img = cv2.resize(crop_img,(img_dim,img_dim), interpolation = cv2.INTER_CUBIC)
 				res_img = res_img.reshape([img_dim,img_dim,1])
 				X_data.append(res_img)
-				# out_name = vfile[:-4] + '_' + str(frame) + '.png'
-				# out_file = os.path.join(out_video_dir,out_name)
-				# cv2.imwrite(out_file, res_img) 
 
 			# INcrease the frame count.
 			frame += 1
+
+		# Save the video ndarray to .npy format
 		X_data = np.array(X_data)
-		out_file = os.path.join()
+		out_file_name = vfile[:-4] + '.npy'
+		out_file = os.path.join(out_path,out_file_name)
 		np.save(out_file,X_data)
+
 	return 
 
 #========================================================== Main function ===================================================
 # Choose between train and test mode. No difference between train and test data, just different paths.
-#mode = raw_input('Choose train or validation: ')
-mode = 'train'
+mode = raw_input('Choose train or validation: ')
 print mode
 
 if mode == 'train':
@@ -94,5 +90,9 @@ elif mode == 'validation':
 	df = pd.read_csv(validation_file_skeletal)
 	video_path = validation_video_path
 	out_path = validation_out_path
+
+if not os.path.exists(out_path):
+	os.makedirs(out_path)
+	print 'directory %s created' % out_path
 
 extract_body(df,video_path,out_path)

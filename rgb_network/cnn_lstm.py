@@ -1,5 +1,7 @@
 import os
 import re
+import random
+import time
 import pandas as pd
 import numpy as np
 
@@ -15,10 +17,13 @@ from keras.callbacks import EarlyStopping, ModelCheckpoint
 from keras.layers.normalization import BatchNormalization
 from keras import backend as K
 from keras.optimizers import Adam
+from keras.preprocessing import sequence
 
 #========================================================= Global variables =================================================
-train_path = '/home/alex/Documents/Data/training_up_body_images'
-validation_path = '/home/alex/Documents/Data/validation_up_body_images'
+train_path = '/home/alex/Documents/Data/training_up_body'
+validation_path = '/home/alex/Documents/Data/validation_up_body'
+train_lab_file = '../training.csv'
+validation_lab_file = '../validation.csv'
 
 maxlen = 1900
 img_dim = 64
@@ -26,10 +31,12 @@ nb_classes = 22
 absolute_max_sequence_len = 28
 stamp = 'cnn_lstm'
 minibatch_size = 2
+val_split = 0.2
+nb_epoch = 1
 
 
 #=========================================================== Definitions ====================================================
-class DataGenerator(keras.callbacks.Callback):
+class DataGenerator(callbacks.Callback):
 
 	def __init__(self,
 		minibatch_size,
@@ -38,13 +45,14 @@ class DataGenerator(keras.callbacks.Callback):
 		val_split,
 		nb_classes,
 		data_path,
+		lab_file,
 		absolute_max_sequence_len=28):
 
 		# Currently is only 2 files per batch.
 		self.minibatch_size = minibatch_size
 		# Maximum length of data sequence.
 		self.maxlen = maxlen
-		# 39 mel frequency feats.
+		# Dimensionality of the images.
 		self.img_dim = img_dim
 		# Size of the validation set.
 		self.val_split = val_split
@@ -53,31 +61,35 @@ class DataGenerator(keras.callbacks.Callback):
 		# INdexing variables
 		self.train_index = 0
 		self.val_index = 0
-		# Actually 1-42 classes and 43 is the blank label and 0 is oov.
+		# Actually 1-21 classes and 22 is the blank label and 0 is oov.
 		self.nb_classes = nb_classes
+		# The path where the data files are saved.
 		self.data_path = data_path
+		# The .csv files with the labels.
+		self.lab_file = lab_file
 		# Blank model to use.
 		self.blank_label = np.array([self.nb_classes - 1])
 
 		self.load_dataset()
 
 
-	# Reads the filelist, shuffles it and splits into training and validation set.
+	# Reads the filelist, shuffles it and splits into training and validation set. Also loads the lab file.
 	def load_dataset(self):
-
+		labs = pd.read_csv(self.lab_file)
+		self.labs = labs
 		file_list = sorted(os.listdir(self.data_path))
 
 		random.seed(10)
 		random.shuffle(file_list)
 
-		# SPlit to training and validation set.
+		# Split to training and validation set.
 		split_point = int(len(file_list) * (1 - self.val_split))
 		self.train_list, self.val_list = file_list[:split_point], file_list[split_point:]
 		self.train_size = len(self.train_list)
 		self.val_size = len(self.val_list)
 
 
-	#Make sure that train and validation lists have an even length to avoid mini-batches of size 1
+		#Make sure that train and validation lists have an even length to avoid mini-batches of size 1
 		train_mod_by_batch_size = self.train_size % self.minibatch_size
 
 		if train_mod_by_batch_size != 0:
@@ -99,21 +111,6 @@ class DataGenerator(keras.callbacks.Callback):
 			return self.train_size
 		else:
 			return self.val_size
-
-
-	# Normalize the data to have zero mean and unity variance.
-	def normalize_data(self):
-		# Column 39 has the filename and column 40 the labels.
-		data = self.df.drop([39,40], axis=1).as_matrix().astype(float)
-
-		norm_data = preprocessing.scale(data)
-
-		norm_df = pd.DataFrame(norm_data)
-
-		norm_df[39] = self.df[39]
-		norm_df[40] = self.df[40]
-
-		return norm_df
 
 
 	# each time a batch (list of file ids) is requested from train/val/test
@@ -141,31 +138,27 @@ class DataGenerator(keras.callbacks.Callback):
 		labels = np.ones([size, self.absolute_max_sequence_len])
 		input_length = np.zeros([size, 1])
 		label_length = np.zeros([size, 1])
-##################################################################################################################################
+
 		# Read batch.
 		for i in range(len(batch)):
 			file = batch[i]
+			file_path = os.path.join(self.data_path,file)
+			file_num = int(file[6:11])
 
-			vf = self.df[self.df[39] == file]
-			# Downsample by 5 the audio.
-			vf = vf.iloc[::5, :].reset_index(drop=True)
-			# SElect and pad data sequence to max length.
-			gest_seq = vf.drop([39,40],axis=1).as_matrix().astype(float)
+			gest_seq = np.load(file_path).astype(float)
+			# Normalize data 
+			gest_seq /= 255.
+			# Pad data sequence to max length.
 			gest_seq = sequence.pad_sequences([gest_seq],
 				maxlen=self.maxlen,
 				padding='post',
 				truncating='post',
 				dtype='float32')
-			
+
+
 			# Create the label vector. Ignores the blanks.
-			lab_seq = vf[vf[40] != 0][40].unique().astype('float32')
-			index = np.argwhere(lab_seq==0)
-			lab_seq = np.delete(lab_seq, index)
-			lab_seq = self.sent_2_words(lab_seq)
-
-			# Insert oovs between gesture labels. (did not improve things)
-			# lab_seq = np.insert(lab_seq, slice(1, None), 0)
-
+			lab_seq = self.labs[self.labs['Id'] == file_num]
+			lab_seq = lab_seq['Sequence'].values
 			# If a sequence is not found insert a blank example and pad.
 			if lab_seq.shape[0] == 0:
 				lab_seq = sequence.pad_sequences([self.blank_label],
@@ -174,9 +167,11 @@ class DataGenerator(keras.callbacks.Callback):
 					value=-1)
 				labels[i, :] = lab_seq
 				label_length[i] = 1
-			# Else use the save the returned variables.
+			# Else save the returned variables.
 			else:
 				X_data[i, :, :] = gest_seq
+				lab_seq = lab_seq[0].split()
+				lab_seq = np.array([int(lab) for lab in lab_seq]).astype('float32')
 				label_length[i] = lab_seq.shape[0]
 				lab_seq = sequence.pad_sequences([lab_seq],
 					maxlen=(self.absolute_max_sequence_len),
@@ -203,6 +198,7 @@ class DataGenerator(keras.callbacks.Callback):
 
 		return (inputs, outputs)
 
+
 	# Get the next training batch and update index. Called by the generator.
 	def next_train(self):
 		while 1:
@@ -212,6 +208,7 @@ class DataGenerator(keras.callbacks.Callback):
 				self.train_index = 0
 			yield ret
 
+
 	# Get the next validation batch and update index. Called by the generator.
 	def next_val(self):
 		while 1:
@@ -220,16 +217,6 @@ class DataGenerator(keras.callbacks.Callback):
 			if self.val_index >= self.val_size:
 				self.val_index = 0
 			yield ret
-
-	# Save model and weights on epochs end.
-	def on_epoch_end(self, epoch, logs={}):
-		model_json = self.model.to_json()
-		with open("sp_ctc_lstm_model.json", "w") as json_file:
-			json_file.write(model_json)
-		# serialize weights to HDF5
-		self.model.save_weights("sp_ctc_lstm_weights.h5")
-
-		print "Saved model to disk"
 
 
 # the actual loss calc occurs here despite it not being
@@ -258,13 +245,13 @@ def build_net():
 	# CNN Block 1
 	drop1 = TimeDistributed(Dropout(0.5
 		),name='drop_1')(input_layer)
-	conv1 = TimeDistributed(Convolution2D(32, (3,3),
+	conv1 = TimeDistributed(Convolution2D(8, (3,3),
 		activation='relu', 
 		padding='valid',
 		kernel_initializer='lecun_uniform',
 		kernel_constraint=maxnorm(3)),
 		name='conv_1')(drop1)
-	conv2 = TimeDistributed(Convolution2D(32, (3,3),
+	conv2 = TimeDistributed(Convolution2D(8, (3,3),
 		activation='relu', 
 		padding='valid',
 		kernel_initializer='lecun_uniform',
@@ -276,13 +263,13 @@ def build_net():
 	# CNN Block 2
 	drop2 = TimeDistributed(Dropout(0.5),
 		name='drop_2')(pool1)
-	conv3 = TimeDistributed(Convolution2D(64, (3,3),
+	conv3 = TimeDistributed(Convolution2D(16, (3,3),
 		activation='relu', 
 		padding='valid',
 		kernel_initializer='lecun_uniform',
 		kernel_constraint=maxnorm(3)),
 		name='conv_3')(drop2)
-	conv4 = TimeDistributed(Convolution2D(64, (3,3),
+	conv4 = TimeDistributed(Convolution2D(16, (3,3),
 		activation='relu', 
 		padding='valid',
 		kernel_initializer='lecun_uniform',
@@ -294,7 +281,7 @@ def build_net():
 	flat = TimeDistributed(Flatten(),name='flatten')(pool2)
 	
 	# LSTM Block 1
-	lstm_1 = Bidirectional(LSTM(500, 
+	lstm_1 = Bidirectional(LSTM(100, 
 		name='blstm_1', 
 		activation='tanh', 
 		recurrent_activation='hard_sigmoid', 
@@ -306,7 +293,7 @@ def build_net():
 		merge_mode='concat')(flat)
 
 	# LSTM Block 2
-	lstm_2 = Bidirectional(LSTM(500,
+	lstm_2 = Bidirectional(LSTM(100,
 		name='blstm_2', 
 		activation='tanh', 
 		recurrent_activation='hard_sigmoid', 
@@ -365,19 +352,6 @@ def build_net():
 	with open(stamp + ".json", "w") as json_file:
 	    json_file.write(model_json)
 
-	# Early stopping to avoid overfitting.
-	earlystopping = EarlyStopping(monitor='val_loss',
-		patience=20,
-		verbose=1)
-	# Checkpoint to save the weights with the best validation accuracy.
-	best_model_path = stamp + ".h5"
-	checkpoint = ModelCheckpoint(best_model_path,
-		monitor='val_loss',
-		verbose=1,
-		save_best_only=True,
-		save_weights_only=True,
-		mode='auto')
-
 	return model
 
 
@@ -390,13 +364,43 @@ print mode
 
 if mode == 'train':
 	data_path = train_path
+	lab_file = train_lab_file
 elif mode == 'validation':
 	data_path = validation_path
+	lab_file = validation_lab_file
 
 data_gen = DataGenerator(minibatch_size=minibatch_size,
 	img_dim=img_dim,
 	maxlen=maxlen,
 	val_split=val_split,
 	nb_classes=nb_classes,
-	data_path=data_path)
-#model = build_net()
+	data_path=data_path,
+	lab_file=lab_file)
+
+model = build_net()
+
+# Early stopping to avoid overfitting.
+earlystopping = EarlyStopping(monitor='val_loss',
+	patience=20,
+	verbose=1)
+# Checkpoint to save the weights with the best validation accuracy.
+best_model_path = stamp + ".h5"
+checkpoint = ModelCheckpoint(best_model_path,
+	monitor='val_loss',
+	verbose=1,
+	save_best_only=True,
+	save_weights_only=True,
+	mode='auto')
+
+print 'Start training.'
+start_time = time.time()
+
+model.fit_generator(generator=data_gen.next_train(),
+	steps_per_epoch=(data_gen.get_size(train=True)/minibatch_size),
+	epochs=nb_epoch,
+	validation_data=data_gen.next_val(),
+	validation_steps=(data_gen.get_size(train=False)/minibatch_size),
+	callbacks=[earlystopping, checkpoint, data_gen])
+
+end_time = time.time()
+print "--- Training time: %s seconds ---" % (end_time - start_time)
