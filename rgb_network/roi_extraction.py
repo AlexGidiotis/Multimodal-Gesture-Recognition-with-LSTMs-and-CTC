@@ -12,7 +12,7 @@ validation_video_path = '/home/alex/Documents/Data/Test_Color_vid'
 train_out_path = '/home/alex/Documents/Data/training_up_body'
 validation_out_path = '/home/alex/Documents/Data/validation_up_body'
 
-img_dim = 64
+img_dim = 48
 
 #=========================================================== Definitions ====================================================
 def extract_body(df,video_path,out_path):
