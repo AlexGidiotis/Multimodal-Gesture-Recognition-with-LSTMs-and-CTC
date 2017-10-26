@@ -297,7 +297,7 @@ def build_net():
 		activation='tanh', 
 		recurrent_activation='hard_sigmoid', 
 		recurrent_dropout=0.0, 
-		dropout=0.6, 
+		dropout=0.5, 
 		kernel_initializer=uni_initializer, 
 		return_sequences=True), 
 		merge_mode='concat')(flat)
@@ -309,7 +309,7 @@ def build_net():
 		activation='tanh', 
 		recurrent_activation='hard_sigmoid', 
 		recurrent_dropout=0.0, 
-		dropout=0.6, 
+		dropout=0.5, 
 		kernel_initializer=uni_initializer, 
 		return_sequences=True), 
 		merge_mode='concat')(lstm_1)
@@ -318,7 +318,7 @@ def build_net():
 		name='residual_1')
 
 	# Dense Block
-	drop3 = Dropout(0.6,
+	drop3 = Dropout(0.5,
 		name='drop_3')(res_block_1)
 	# Predicts a class probability distribution at every time step.
 	inner = Dense(nb_classes,
@@ -379,6 +379,8 @@ def load_model():
 	adam = Adam(lr=0.00008,
 		clipvalue=0.5)
 	print("Loaded model from disk")
+
+	y_pred = model.get_layer('softmax').output
 
 	model.compile(loss={'ctc': lambda y_true, y_pred: y_pred},
 		optimizer=adam)
