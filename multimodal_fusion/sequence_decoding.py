@@ -47,10 +47,10 @@ class DataGenerator(keras.callbacks.Callback):
 		# The input files.
 		if self.test == 'test':
 			in_file_audio = '/home/alex/Documents/Python/multimodal_gesture_recognition/speech_blstm/Testing_set_audio.csv'
-			in_file_skeletal = '/home/alex/Documents/Python/multimodal_gesture_recognition/Validation_set_skeletal.csv'
+			in_file_skeletal = 'Validation_set_skeletal.csv'
 		elif self.test == 'train':
 			in_file_audio = '/home/alex/Documents/Python/multimodal_gesture_recognition/speech_blstm/Training_set_audio_labeled.csv'
-			in_file_skeletal = '/home/alex/Documents/Python/multimodal_gesture_recognition/Training_set_skeletal.csv'
+			in_file_skeletal = 'Training_set_skeletal.csv'
 
 		# Read the inputs.
 		self.df_a = pd.read_csv(in_file_audio, header=None)

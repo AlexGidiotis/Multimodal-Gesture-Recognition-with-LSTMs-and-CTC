@@ -258,9 +258,9 @@ def decode_batch(pred_out,f_list):
 
 
 #========================================================== Main function ===================================================
-# Choose between train and test mode. No difference between 
-# train and test data, just different paths.
-#mode = raw_input('Choose train or validation: ')
+# Choose between validation and test mode. No difference between 
+# validation and test data, just different paths.
+#mode = raw_input('Choose test or validation: ')
 mode = 'validation'
 
 print mode

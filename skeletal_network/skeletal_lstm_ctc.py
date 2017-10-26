@@ -64,7 +64,7 @@ class DataGenerator(keras.callbacks.Callback):
 	# THe input data should be in csv file with the required 24 columns. We are using 22 extracted skeletal features.
 	def load_dataset(self):
 		# The input file path.
-		in_file = '/home/alex/Documents/Python/multimodal_gesture_recognition/Training_set_skeletal.csv'
+		in_file = 'Training_set_skeletal.csv'
 
 		self.df = pd.read_csv(in_file)
 

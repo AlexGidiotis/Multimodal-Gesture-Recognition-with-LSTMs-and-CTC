@@ -184,7 +184,6 @@ def calculate_distances(df):
 
 #================================================== Calculate some sets of angles ==============================================================
 # Here we calculate the angles of hands-hip, hands-shoulder center and hands-elbows. 
-# We represent this angles with 8-chain codes where: 0 is movement right, 1 is up-right, 2 is up, 3 is up-left, 4 is left, 5 is down-left, six is down, 7 is down-right.
 # Returns: the original df with the angles columns added to it.
 def calculate_angles(df):
 
@@ -198,9 +197,6 @@ def calculate_angles(df):
 	le, re = np.array((le_x,le_y)), np.array((re_x,re_y))
 	hip, shc = np.array((hip_x,hip_y)), np.array((shc_x,shc_y))
 
-	# The number of chain codes we are going to use as described.
-	num_chain = 8
-
 	# Calculate the distances between joints.
 	lh_hip_dist, rh_hip_dist = np.array((lh-hip)), np.array((rh-hip))
 	lh_shc_dist, rh_shc_dist = np.array((lh-shc)), np.array((rh-shc))
@@ -211,56 +207,13 @@ def calculate_angles(df):
 	Theta_lh_shc, Theta_rh_shc = np.arctan2(lh_shc_dist[1],lh_shc_dist[0]), np.arctan2(rh_shc_dist[1],rh_shc_dist[0])
 	Theta_lh_el, Theta_rh_el = np.arctan2(lh_el_dist[1],lh_el_dist[0]), np.arctan2(rh_el_dist[1],rh_el_dist[0])
 
-	# Calculate the relative angles and convert to chain codes.
-	Theta_lh_hip_t = (num_chain - (Theta_lh_hip/(np.pi/4) + 0.5 + (lh_hip_dist[1]<0)*num_chain).astype(int))%num_chain
-	Theta_rh_hip_t = (num_chain - (Theta_rh_hip/(np.pi/4) + 0.5 + (rh_hip_dist[1]<0)*num_chain).astype(int))%num_chain
-	Theta_lh_shc_t = (num_chain - (Theta_lh_shc/(np.pi/4) + 0.5 + (lh_shc_dist[1]<0)*num_chain).astype(int))%num_chain
-	Theta_rh_shc_t = (num_chain - (Theta_rh_shc/(np.pi/4) + 0.5 + (rh_shc_dist[1]<0)*num_chain).astype(int))%num_chain
-	Theta_lh_el_t = (num_chain - (Theta_lh_el/(np.pi/4) + 0.5 + (lh_el_dist[1]<0)*num_chain).astype(int))%num_chain
-	Theta_rh_el_t = (num_chain - (Theta_rh_el/(np.pi/4) + 0.5 + (rh_el_dist[1]<0)*num_chain).astype(int))%num_chain
-
 	# Store back into the data frame to be returned.
-	df['lh_hip_ang'], df['rh_hip_ang'] = Theta_lh_hip_t, Theta_rh_hip_t	
-	df['lh_shc_ang'], df['rh_shc_ang'] = Theta_lh_shc_t, Theta_rh_shc_t
-	df['lh_el_ang'], df['rh_el_ang'] = Theta_lh_el_t, Theta_rh_el_t	
+	df['lh_hip_ang'], df['rh_hip_ang'] = Theta_lh_hip, Theta_rh_hip	
+	df['lh_shc_ang'], df['rh_shc_ang'] = Theta_lh_shc, Theta_rh_shc
+	df['lh_el_ang'], df['rh_el_ang'] = Theta_lh_el, Theta_rh_el	
 
 	return df
 
-
-# ======================================= Calculate the movement directions of hands. ==========================================================
-# Get the movement direction of the hands from the relative to the previous position of each hand. 
-# Again these directions are represented using 8-chain codes.
-# Returns: the data frame with the left and right hand direction columns added.
-def calculate_movement_directions(df):
-	# Load current and previous indices into arrays for fast computation.
-	lh_x,lh_y,rh_x,rh_y = df['lhX'].as_matrix(),df['lhY'].as_matrix(),df['rhX'].as_matrix(),df['rhY'].as_matrix()
-	pr_lh_x,pr_lh_y,pr_rh_x,pr_rh_y = df['pre_lhX'].as_matrix(),df['pre_lhY'].as_matrix(),df['pre_rhX'].as_matrix(),df['pre_rhY'].as_matrix()
-
-	# Create the zero arrays to store velocities.
-	lh_direction,rh_direction = np.zeros_like(lh_x), np.zeros_like(rh_x)
-
-	# Create the position vectors from the x,y vectors.
-	lh, pre_lh, rh, pre_rh = np.array((lh_x,lh_y)), np.array((pr_lh_x,pr_lh_y)), np.array((rh_x,rh_y)), np.array((pr_rh_x,pr_rh_y))
-
-	# The number of chain codes we are going to use.
-	num_chain = 8
-
-	# Calculate the distances from the previous position.
-	lh_movement_dist, rh_movement_dist = np.array((lh-pre_lh)), np.array((rh-pre_rh))
-
-	# Calculate some angles.
-	Theta_lh, Theta_rh = np.arctan2(lh_movement_dist[1],lh_movement_dist[0]), np.arctan2(rh_movement_dist[1],rh_movement_dist[0])
-
-	# Calculate the relative to the previous position angle and convert to chain codes.
-	Theta_lh_t = (num_chain - (Theta_lh/(np.pi/4) + 0.5 + (lh_movement_dist[1]<0)*num_chain).astype(int))%num_chain
-	Theta_rh_t = (num_chain - (Theta_rh/(np.pi/4) + 0.5 + (rh_movement_dist[1]<0)*num_chain).astype(int))%num_chain
-
-	# Save the direction arrays.
-	lh_direction[5:],rh_direction[5:] = Theta_lh_t[5:], Theta_rh_t[5:]
-
-	# Store to the data frame to be returned.
-	df['lh_dir'], df['rh_dir'] = lh_direction, rh_direction	
-	return df
 
 #====================================================== Write labels to training datafile =======================================================
 def write_train_labs(train_df):
@@ -315,7 +268,15 @@ def write_train_labs(train_df):
 
 #============================================================= Main function ====================================================================
 # This is the function that goes through the feature extraction process and writes the output.
-sk_data_file = "training_data.csv"
+mode = raw_input('Select train/val mode: ')
+print mode
+
+if mode == 'train':
+	sk_data_file = "training_data.csv"
+	out_file = "Training_set_skeletal.csv"
+elif mode == 'val':
+	sk_data_file = "validation_data.csv"
+	out_file = "Validation_set_skeletal.csv"
 
 print "Loading data..."
 df = load_data(sk_data_file) 
@@ -330,10 +291,9 @@ print "Calculating distances..."
 df = calculate_distances(df)
 print "Calculating angles..."
 df = calculate_angles(df)
-print "Calculating movement directions..."
-df = calculate_movement_directions(df)
 print "Writing output to csv..."
-df.to_csv("Training_set_skeletal.csv",index=False)
+df.to_csv(out_file,
+	index=False)
 
 
 

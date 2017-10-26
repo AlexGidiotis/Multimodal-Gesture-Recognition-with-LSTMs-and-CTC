@@ -69,7 +69,7 @@ class DataGenerator(keras.callbacks.Callback):
 		print 'Loading data...'
 		# The input files.
 		in_file_audio = '/home/alex/Documents/Python/multimodal_gesture_recognition/speech_blstm/Training_set_audio_labeled.csv'
-		in_file_skeletal = '/home/alex/Documents/Python/multimodal_gesture_recognition/Training_set_skeletal.csv'
+		in_file_skeletal = 'Training_set_skeletal.csv'
 		# Read the inputs.
 		self.df_a = pd.read_csv(in_file_audio,
 			header=None)

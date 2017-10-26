@@ -22,9 +22,7 @@ from keras.models import model_from_json
 
 #========================================================= Global variables =================================================
 train_path = '/home/alex/Documents/Data/training_up_body'
-validation_path = '/home/alex/Documents/Data/validation_up_body'
 train_lab_file = '../training.csv'
-validation_lab_file = '../validation.csv'
 
 maxlen = 1900
 img_dim = 48
@@ -389,20 +387,13 @@ def load_model():
 
 
 #========================================================== Main function ===================================================
-# Choose between train and test mode. No difference between 
-# train and test data, just different paths.
-#mode = raw_input('Choose train or validation: ')
 mode = 'train'
 load_previous = raw_input('Type yes/no if you want to load previous model: ')
 
 print mode
 
-if mode == 'train':
-	data_path = train_path
-	lab_file = train_lab_file
-elif mode == 'validation':
-	data_path = validation_path
-	lab_file = validation_lab_file
+data_path = train_path
+lab_file = train_lab_file
 
 data_gen = DataGenerator(minibatch_size=minibatch_size,
 	img_dim=img_dim,
