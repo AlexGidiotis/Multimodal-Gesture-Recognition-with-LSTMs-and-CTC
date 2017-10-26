@@ -434,9 +434,11 @@ checkpoint = ModelCheckpoint(best_model_path,
 	mode='auto')
 
 plateau_callback = ReduceLROnPlateau(monitor='loss',
-	factor=0.1,
-	patience=10,
-	min_lr=0.00005)
+	factor=0.5,
+	patience=4,
+	min_lr=0.00005,
+	verbose=1,
+	cooldown=2)
 
 print 'Start training.'
 start_time = time.time()

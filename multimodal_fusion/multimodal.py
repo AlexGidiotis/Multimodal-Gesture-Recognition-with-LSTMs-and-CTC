@@ -129,15 +129,14 @@ class DataGenerator(keras.callbacks.Callback):
 			data = self.df_s[['lh_v','rh_v','le_v','re_v','lh_dist_rp',
 			'rh_dist_rp','lh_hip_d','rh_hip_d','le_hip_d','re_hip_d',
 			'lh_shc_d','rh_shc_d','le_shc_d','re_shc_d','lh_hip_ang',
-			'rh_hip_ang','lh_shc_ang','rh_shc_ang','lh_el_ang','rh_el_ang',
-			'lh_dir','rh_dir']].as_matrix().astype(float)
+			'rh_hip_ang','lh_shc_ang','rh_shc_ang','lh_el_ang','rh_el_ang']].as_matrix().astype(float)
 			norm_data = preprocessing.scale(data)
 			norm_df = pd.DataFrame(norm_data,
 				columns=['lh_v','rh_v','le_v','re_v','lh_dist_rp',
 				'rh_dist_rp','lh_hip_d','rh_hip_d','le_hip_d','re_hip_d',
 				'lh_shc_d','rh_shc_d','le_shc_d','re_shc_d','lh_hip_ang',
 				'rh_hip_ang','lh_shc_ang','rh_shc_ang','lh_el_ang',
-				'rh_el_ang','lh_dir','rh_dir'])
+				'rh_el_ang'])
 			norm_df['file_number'] = self.df_s['file_number']
 			norm_df['labels'] = self.df_s['labels']
 
@@ -196,8 +195,7 @@ class DataGenerator(keras.callbacks.Callback):
 			gest_seq_s = vf_s[['lh_v','rh_v','le_v','re_v','lh_dist_rp',
 			'rh_dist_rp','lh_hip_d','rh_hip_d','le_hip_d','re_hip_d',
 			'lh_shc_d','rh_shc_d','le_shc_d','re_shc_d','lh_hip_ang',
-			'rh_hip_ang','lh_shc_ang','rh_shc_ang','lh_el_ang','rh_el_ang',
-			'lh_dir','rh_dir']].as_matrix().astype(float)
+			'rh_hip_ang','lh_shc_ang','rh_shc_ang','lh_el_ang','rh_el_ang']].as_matrix().astype(float)
 			gest_seq_s = sequence.pad_sequences([gest_seq_s],
 				maxlen=self.maxlen,
 				padding='post',
@@ -338,7 +336,7 @@ maxlen = 1900
 nb_classes = 22
 nb_epoch = 150
 numfeats_speech = 39
-numfeats_skeletal = 22
+numfeats_skeletal = 20
 
 # Can load a previous model to resume training. 'yes'
 load_previous = raw_input("Load previous model? ")

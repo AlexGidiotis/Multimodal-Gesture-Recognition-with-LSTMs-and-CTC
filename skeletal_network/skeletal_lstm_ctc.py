@@ -68,9 +68,10 @@ class DataGenerator(keras.callbacks.Callback):
 
 		self.df = pd.read_csv(in_file)
 
-		self.df = self.df[['lh_v','rh_v','le_v','re_v','lh_dist_rp','rh_dist_rp','lh_hip_d','rh_hip_d','le_hip_d','re_hip_d','lh_shc_d','rh_shc_d',
-							'le_shc_d','re_shc_d','lh_hip_ang','rh_hip_ang','lh_shc_ang','rh_shc_ang','lh_el_ang','rh_el_ang','lh_dir','rh_dir', 
-							'file_number', 'labels']]
+		self.df = self.df[['lh_v','rh_v','le_v','re_v','lh_dist_rp','rh_dist_rp',
+			'lh_hip_d','rh_hip_d','le_hip_d','re_hip_d','lh_shc_d','rh_shc_d',
+			'le_shc_d','re_shc_d','lh_hip_ang','rh_hip_ang','lh_shc_ang',
+			'rh_shc_ang','lh_el_ang','rh_el_ang', 'file_number', 'labels']]
 
 		# Zero mean and unity variance normalization.
 		self.df = self.normalize_data()
@@ -115,7 +116,7 @@ class DataGenerator(keras.callbacks.Callback):
 		'rh_dist_rp','lh_hip_d','rh_hip_d','le_hip_d','re_hip_d',
 		'lh_shc_d','rh_shc_d','le_shc_d','re_shc_d','lh_hip_ang',
 		'rh_hip_ang','lh_shc_ang','rh_shc_ang','lh_el_ang',
-		'rh_el_ang','lh_dir','rh_dir']].as_matrix().astype(float)
+		'rh_el_ang']].as_matrix().astype(float)
 
 		norm_data = preprocessing.scale(data)
 
@@ -123,7 +124,7 @@ class DataGenerator(keras.callbacks.Callback):
 			columns=['lh_v','rh_v','le_v','re_v','lh_dist_rp','rh_dist_rp',
 			'lh_hip_d','rh_hip_d','le_hip_d','re_hip_d','lh_shc_d','rh_shc_d',
 			'le_shc_d','re_shc_d','lh_hip_ang','rh_hip_ang','lh_shc_ang',
-			'rh_shc_ang','lh_el_ang','rh_el_ang','lh_dir','rh_dir'])
+			'rh_shc_ang','lh_el_ang','rh_el_ang'])
 
 		norm_df['file_number'] = self.df['file_number']
 		norm_df['labels'] = self.df['labels']
@@ -165,8 +166,7 @@ class DataGenerator(keras.callbacks.Callback):
 			gest_seq = vf[['lh_v','rh_v','le_v','re_v','lh_dist_rp',
 			'rh_dist_rp','lh_hip_d','rh_hip_d','le_hip_d','re_hip_d',
 			'lh_shc_d','rh_shc_d','le_shc_d','re_shc_d','lh_hip_ang',
-			'rh_hip_ang','lh_shc_ang','rh_shc_ang','lh_el_ang','rh_el_ang',
-			'lh_dir','rh_dir']].as_matrix().astype(float)
+			'rh_hip_ang','lh_shc_ang','rh_shc_ang','lh_el_ang','rh_el_ang']].as_matrix().astype(float)
 			gest_seq = sequence.pad_sequences([gest_seq],
 				maxlen=self.maxlen,
 				padding='post',
@@ -263,7 +263,7 @@ val_split = 0.2
 maxlen = 1900
 nb_classes = 22
 nb_epoch = 150
-numfeats = 22
+numfeats = 20
 
 uni_initializer = RandomUniform(minval=-0.05,
 	maxval=0.05,
