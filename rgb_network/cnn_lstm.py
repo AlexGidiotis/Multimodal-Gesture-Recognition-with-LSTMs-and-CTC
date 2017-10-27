@@ -248,7 +248,7 @@ def build_net():
 		shape=input_shape)
 
 	# CNN Block 1
-	drop1 = TimeDistributed(Dropout(0.5),
+	drop1 = TimeDistributed(Dropout(0.2),
 		name='drop_1')(input_layer)
 	conv1 = TimeDistributed(Convolution2D(8, (3,3),
 		activation='relu', 
@@ -268,7 +268,7 @@ def build_net():
 		name='max_pool_1')(conv2)
 
 	# CNN Block 2
-	drop2 = TimeDistributed(Dropout(0.5),
+	drop2 = TimeDistributed(Dropout(0.2),
 		name='drop_2')(pool1)
 	conv3 = TimeDistributed(Convolution2D(16, (3,3),
 		activation='relu', 
@@ -290,24 +290,24 @@ def build_net():
 	flat = TimeDistributed(Flatten(),name='flatten')(pool2)
 	
 	# LSTM Block 1
-	lstm_1 = Bidirectional(LSTM(100, 
+	lstm_1 = Bidirectional(LSTM(300, 
 		name='blstm_1', 
 		activation='tanh', 
 		recurrent_activation='hard_sigmoid', 
 		recurrent_dropout=0.0, 
-		dropout=0.5, 
+		dropout=0.2, 
 		kernel_initializer=uni_initializer, 
 		return_sequences=True), 
 		merge_mode='concat')(flat)
 	lstm_1 = BatchNormalization(name='bn_5')(lstm_1)
 
 	# LSTM Block 2
-	lstm_2 = Bidirectional(LSTM(100,
+	lstm_2 = Bidirectional(LSTM(300,
 		name='blstm_2', 
 		activation='tanh', 
 		recurrent_activation='hard_sigmoid', 
 		recurrent_dropout=0.0, 
-		dropout=0.5, 
+		dropout=0.2, 
 		kernel_initializer=uni_initializer, 
 		return_sequences=True), 
 		merge_mode='concat')(lstm_1)
@@ -316,7 +316,7 @@ def build_net():
 		name='residual_1')
 
 	# Dense Block
-	drop3 = Dropout(0.5,
+	drop3 = Dropout(0.2,
 		name='drop_3')(res_block_1)
 	# Predicts a class probability distribution at every time step.
 	inner = Dense(nb_classes,
@@ -374,7 +374,7 @@ def load_model():
 	# load weights into new model
 	model.load_weights(stamp + '.h5')
 
-	adam = Adam(lr=0.00008,
+	adam = Adam(lr=0.0001,
 		clipvalue=0.5)
 	print("Loaded model from disk")
 
@@ -391,6 +391,8 @@ mode = 'train'
 load_previous = raw_input('Type yes/no if you want to load previous model: ')
 
 print mode
+
+K.set_learning_phase(1)  # all new operations will be in train mode from now on
 
 data_path = train_path
 lab_file = train_lab_file
@@ -426,7 +428,7 @@ checkpoint = ModelCheckpoint(best_model_path,
 
 plateau_callback = ReduceLROnPlateau(monitor='loss',
 	factor=0.5,
-	patience=4,
+	patience=7,
 	min_lr=0.00005,
 	verbose=1,
 	cooldown=2)

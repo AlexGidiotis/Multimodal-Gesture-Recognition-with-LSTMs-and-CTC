@@ -265,6 +265,8 @@ nb_classes = 22
 nb_epoch = 150
 numfeats = 20
 
+K.set_learning_phase(1)  # all new operations will be in train mode from now on
+
 uni_initializer = RandomUniform(minval=-0.05,
 	maxval=0.05,
 	seed=47)

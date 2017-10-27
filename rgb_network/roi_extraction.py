@@ -55,14 +55,16 @@ def extract_body(df,video_path,out_path):
 				crop_img = gray_img[up:down,left:right]
 
 				# Downsample to 64x64 pixels.
-				res_img = cv2.resize(crop_img,(img_dim,img_dim), interpolation = cv2.INTER_CUBIC)
+				res_img = cv2.resize(crop_img,(img_dim,img_dim),
+					interpolation = cv2.INTER_CUBIC)
 				res_img = res_img.reshape([img_dim,img_dim,1])
 				X_data.append(res_img)
 			# If unable to use the skeletal info do this.
 			except:
 				crop_img = gray_img[0:330,0:640]
 
-				res_img = cv2.resize(crop_img,(img_dim,img_dim), interpolation = cv2.INTER_CUBIC)
+				res_img = cv2.resize(crop_img,(img_dim,img_dim),
+					interpolation = cv2.INTER_CUBIC)
 				res_img = res_img.reshape([img_dim,img_dim,1])
 				X_data.append(res_img)
 

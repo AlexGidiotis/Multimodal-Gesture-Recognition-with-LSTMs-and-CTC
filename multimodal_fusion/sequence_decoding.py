@@ -282,6 +282,8 @@ nb_epoch = 100
 numfeats_speech = 39
 numfeats_skeletal = 22
 
+K.set_learning_phase(0)  # all new operations will be in test mode from now on
+
 test_set = raw_input('select train or test: ')
 data_gen = DataGenerator(minibatch_size=minibatch_size, numfeats_speech=numfeats_speech, numfeats_skeletal=numfeats_skeletal, maxlen=maxlen, nb_classes=nb_classes, test_set=test_set)
 

@@ -338,6 +338,8 @@ nb_epoch = 150
 numfeats_speech = 39
 numfeats_skeletal = 20
 
+K.set_learning_phase(1)  # all new operations will be in train mode from now on
+
 # Can load a previous model to resume training. 'yes'
 load_previous = raw_input("Load previous model? ")
 # Create data generator object.

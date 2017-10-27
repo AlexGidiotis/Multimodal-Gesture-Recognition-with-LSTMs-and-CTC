@@ -195,7 +195,7 @@ def load_model():
 
 	print("Loaded model from disk")
 
-	adam = Adam(lr=0.00008,
+	adam = Adam(lr=0.0001,
 		clipvalue=0.5)
 
 	y_pred = model.get_layer('softmax').output
@@ -264,6 +264,8 @@ def decode_batch(pred_out,f_list):
 mode = 'validation'
 
 print mode
+
+K.set_learning_phase(0)  # all new operations will be in test mode from now on
 
 if mode == 'test':
 	data_path = test_path
