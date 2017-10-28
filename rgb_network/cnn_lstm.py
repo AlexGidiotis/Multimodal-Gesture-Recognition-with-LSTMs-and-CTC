@@ -270,14 +270,14 @@ def build_net():
 	# CNN Block 2
 	drop2 = TimeDistributed(Dropout(0.2),
 		name='drop_2')(pool1)
-	conv3 = TimeDistributed(Convolution2D(16, (3,3),
+	conv3 = TimeDistributed(Convolution2D(16, (1,1),
 		activation='relu', 
 		padding='valid',
 		kernel_initializer='lecun_uniform'),
 		name='conv_3')(drop2)
 	#conv3 = TimeDistributed(BatchNormalization(),
 	#	name='bn_3')(conv3)
-	conv4 = TimeDistributed(Convolution2D(16, (3,3),
+	conv4 = TimeDistributed(Convolution2D(32, (1,1),
 		activation='relu', 
 		padding='valid',
 		kernel_initializer='lecun_uniform'),
@@ -350,8 +350,7 @@ def build_net():
 		outputs=[loss_out])
 	# Optimizer.
 	# Clipping the gradients to have smaller values makes the training smoother.
-	adam = Adam(lr=0.0001,
-		clipvalue=0.5)
+	adam = Adam(lr=0.0001)
 	# the loss calc occurs elsewhere, so use a dummy lambda func for the loss
 	model.compile(loss={'ctc': lambda y_true, y_pred: y_pred},
 		optimizer=adam)
