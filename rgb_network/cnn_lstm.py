@@ -181,7 +181,8 @@ class DataGenerator(callbacks.Callback):
 
 			input_length[i] = (X_data[i].shape[0] - 2)
 		
-		# Normalize data to have unit variance.
+		# Normalize data to lie between -1,1 and have unit variance.
+		X_data -= 128.
 		X_data /= 255.
 
 		# Returned values: a dictionary with 4 values
@@ -250,44 +251,53 @@ def build_net():
 	# CNN Block 1
 	drop1 = TimeDistributed(Dropout(0.2),
 		name='drop_1')(input_layer)
-	conv1 = TimeDistributed(Convolution2D(8, (3,3),
+	conv1 = TimeDistributed(Convolution2D(16, (3,3),
 		activation='relu', 
 		padding='valid',
 		kernel_initializer='lecun_uniform'),
 		name='conv_1')(drop1)
-	#conv1 = TimeDistributed(BatchNormalization(),
-	#	name='bn_1')(conv1)
-	conv2 = TimeDistributed(Convolution2D(8, (3,3),
+	conv2 = TimeDistributed(Convolution2D(16, (3,3),
 		activation='relu', 
 		padding='valid',
 		kernel_initializer='lecun_uniform'),
 		name='conv_2')(conv1)
-	#conv2 = TimeDistributed(BatchNormalization(),
-	#	name='bn_2')(conv2)
 	pool1 = TimeDistributed(MaxPooling2D(pool_size=(2, 2)),
 		name='max_pool_1')(conv2)
 
 	# CNN Block 2
 	drop2 = TimeDistributed(Dropout(0.2),
 		name='drop_2')(pool1)
-	conv3 = TimeDistributed(Convolution2D(16, (1,1),
+	conv3 = TimeDistributed(Convolution2D(32, (1,1),
 		activation='relu', 
 		padding='valid',
 		kernel_initializer='lecun_uniform'),
 		name='conv_3')(drop2)
-	#conv3 = TimeDistributed(BatchNormalization(),
-	#	name='bn_3')(conv3)
 	conv4 = TimeDistributed(Convolution2D(32, (1,1),
 		activation='relu', 
 		padding='valid',
 		kernel_initializer='lecun_uniform'),
 		name='conv_4')(conv3)
-	#conv4 = TimeDistributed(BatchNormalization(),
-	#	name='bn_4')(conv4)
 	pool2 = TimeDistributed(MaxPooling2D(pool_size=(2, 2)),
 		name='max_pool_2')(conv4)
 
-	flat = TimeDistributed(Flatten(),name='flatten')(pool2)
+	# CNN Block 3
+	drop3 = TimeDistributed(Dropout(0.2),
+		name='drop_3')(pool2)
+	conv5 = TimeDistributed(Convolution2D(64, (1,1),
+		activation='relu', 
+		padding='valid',
+		kernel_initializer='lecun_uniform'),
+		name='conv_5')(drop3)
+	conv6 = TimeDistributed(Convolution2D(128, (1,1),
+		activation='relu', 
+		padding='valid',
+		kernel_initializer='lecun_uniform'),
+		name='conv_6')(conv5)
+	pool3 = TimeDistributed(MaxPooling2D(pool_size=(2, 2)),
+		name='max_pool_3')(conv6)
+
+
+	flat = TimeDistributed(Flatten(),name='flatten')(pool3)
 	
 	# LSTM Block 1
 	lstm_1 = Bidirectional(LSTM(300, 
@@ -316,12 +326,12 @@ def build_net():
 		name='residual_1')
 
 	# Dense Block
-	drop3 = Dropout(0.2,
-		name='drop_3')(res_block_1)
+	drop4 = Dropout(0.2,
+		name='drop_4')(res_block_1)
 	# Predicts a class probability distribution at every time step.
 	inner = Dense(nb_classes,
 		name='dense_1',
-		kernel_initializer=uni_initializer)(drop3) 
+		kernel_initializer=uni_initializer)(drop4) 
 	y_pred = Activation('softmax',
 		name='softmax')(inner)
 
@@ -373,8 +383,7 @@ def load_model():
 	# load weights into new model
 	model.load_weights(stamp + '.h5')
 
-	adam = Adam(lr=0.0001,
-		clipvalue=0.5)
+	adam = Adam(lr=0.0001)
 	print("Loaded model from disk")
 
 	y_pred = model.get_layer('softmax').output
