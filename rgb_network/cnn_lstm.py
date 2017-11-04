@@ -5,6 +5,8 @@ import time
 import pandas as pd
 import numpy as np
 
+import tensorflow as tf
+
 from keras.models import Model
 from keras.layers import Dense, Dropout, Activation, Flatten, add, Lambda, AlphaDropout
 from keras.layers import Convolution2D, MaxPooling2D, LSTM, Input
@@ -21,17 +23,20 @@ from keras.models import model_from_json
 
 
 #========================================================= Global variables =================================================
+#gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.8)
+#sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
+
 train_path = '/home/alex/Documents/Data/training_up_body'
 train_lab_file = '../training.csv'
 
 maxlen = 1900
-img_dim = 48
+img_dim = 60
 nb_classes = 22
 absolute_max_sequence_len = 28
 stamp = 'cnn_lstm'
 minibatch_size = 2
 val_split = 0.2
-nb_epoch = 100
+nb_epoch = 500
 
 
 #=========================================================== Definitions ====================================================
@@ -249,68 +254,80 @@ def build_net():
 		shape=input_shape)
 
 	# CNN Block 1
-	drop1 = TimeDistributed(Dropout(0.2),
+	drop1 = TimeDistributed(Dropout(0.1),
 		name='drop_1')(input_layer)
-	conv1 = TimeDistributed(Convolution2D(16, (3,3),
+	conv1 = TimeDistributed(Convolution2D(16, (5,5),
 		activation='relu', 
 		padding='valid',
 		kernel_initializer='lecun_uniform'),
 		name='conv_1')(drop1)
-	conv2 = TimeDistributed(Convolution2D(16, (3,3),
+	'''
+	conv2 = TimeDistributed(Convolution2D(16, (5,5),
 		activation='relu', 
 		padding='valid',
 		kernel_initializer='lecun_uniform'),
 		name='conv_2')(conv1)
+	'''
+	bn_1 = TimeDistributed(BatchNormalization(),
+		name='bn_1')(conv1)
 	pool1 = TimeDistributed(MaxPooling2D(pool_size=(2, 2)),
-		name='max_pool_1')(conv2)
+		name='max_pool_1')(bn_1)
 
 	# CNN Block 2
-	drop2 = TimeDistributed(Dropout(0.2),
+	drop2 = TimeDistributed(Dropout(0.1),
 		name='drop_2')(pool1)
-	conv3 = TimeDistributed(Convolution2D(32, (1,1),
+	conv3 = TimeDistributed(Convolution2D(32, (5,5),
 		activation='relu', 
 		padding='valid',
 		kernel_initializer='lecun_uniform'),
 		name='conv_3')(drop2)
-	conv4 = TimeDistributed(Convolution2D(32, (1,1),
+	'''
+	conv4 = TimeDistributed(Convolution2D(32, (3,3),
 		activation='relu', 
 		padding='valid',
 		kernel_initializer='lecun_uniform'),
 		name='conv_4')(conv3)
+	'''
+	bn_2 = TimeDistributed(BatchNormalization(),
+		name='bn_2')(conv3)
 	pool2 = TimeDistributed(MaxPooling2D(pool_size=(2, 2)),
-		name='max_pool_2')(conv4)
+		name='max_pool_2')(bn_2)
 
 	# CNN Block 3
-	drop3 = TimeDistributed(Dropout(0.2),
+	drop3 = TimeDistributed(Dropout(0.1),
 		name='drop_3')(pool2)
-	conv5 = TimeDistributed(Convolution2D(64, (1,1),
+	conv5 = TimeDistributed(Convolution2D(48, (4,4),
 		activation='relu', 
 		padding='valid',
 		kernel_initializer='lecun_uniform'),
 		name='conv_5')(drop3)
-	conv6 = TimeDistributed(Convolution2D(128, (1,1),
+	'''
+	conv6 = TimeDistributed(Convolution2D(48, (3,3),
 		activation='relu', 
 		padding='valid',
 		kernel_initializer='lecun_uniform'),
 		name='conv_6')(conv5)
+	'''
+	bn_3 = TimeDistributed(BatchNormalization(),
+		name='bn_3')(conv5)
 	pool3 = TimeDistributed(MaxPooling2D(pool_size=(2, 2)),
-		name='max_pool_3')(conv6)
+		name='max_pool_3')(bn_3)
 
 
 	flat = TimeDistributed(Flatten(),name='flatten')(pool3)
 	
 	# LSTM Block 1
-	lstm_1 = Bidirectional(LSTM(300, 
+	lstm_1 = Bidirectional(LSTM(256, 
 		name='blstm_1', 
 		activation='tanh', 
 		recurrent_activation='hard_sigmoid', 
 		recurrent_dropout=0.0, 
-		dropout=0.2, 
+		dropout=0.1, 
 		kernel_initializer=uni_initializer, 
 		return_sequences=True), 
 		merge_mode='concat')(flat)
-	lstm_1 = BatchNormalization(name='bn_5')(lstm_1)
-
+	#lstm_1 = BatchNormalization(name='bn_5')(lstm_1)
+	'''
 	# LSTM Block 2
 	lstm_2 = Bidirectional(LSTM(300,
 		name='blstm_2', 
@@ -324,10 +341,10 @@ def build_net():
 	lstm_2 = BatchNormalization(name='bn_6')(lstm_2)
 	res_block_1 = add([lstm_1, lstm_2],
 		name='residual_1')
-
+	'''
 	# Dense Block
-	drop4 = Dropout(0.2,
-		name='drop_4')(res_block_1)
+	drop4 = Dropout(0.1,
+		name='drop_4')(lstm_1)
 	# Predicts a class probability distribution at every time step.
 	inner = Dense(nb_classes,
 		name='dense_1',
@@ -360,7 +377,8 @@ def build_net():
 		outputs=[loss_out])
 	# Optimizer.
 	# Clipping the gradients to have smaller values makes the training smoother.
-	adam = Adam(lr=0.0001)
+	adam = Adam(lr=0.003,
+		decay=1e-5)
 	# the loss calc occurs elsewhere, so use a dummy lambda func for the loss
 	model.compile(loss={'ctc': lambda y_true, y_pred: y_pred},
 		optimizer=adam)
@@ -383,7 +401,8 @@ def load_model():
 	# load weights into new model
 	model.load_weights(stamp + '.h5')
 
-	adam = Adam(lr=0.0001)
+	adam = Adam(lr=0.001,
+		decay=1e-5)
 	print("Loaded model from disk")
 
 	y_pred = model.get_layer('softmax').output
@@ -449,7 +468,7 @@ model.fit_generator(generator=data_gen.next_train(),
 	epochs=nb_epoch,
 	validation_data=data_gen.next_val(),
 	validation_steps=(data_gen.get_size(train=False)/minibatch_size),
-	callbacks=[earlystopping, checkpoint, data_gen, plateau_callback])
+	callbacks=[checkpoint, data_gen])
 
 end_time = time.time()
 print "--- Training time: %s seconds ---" % (end_time - start_time)
