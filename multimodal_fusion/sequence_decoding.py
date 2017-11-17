@@ -47,11 +47,13 @@ class DataGenerator(keras.callbacks.Callback):
 		# The input files.
 		if self.test == 'test':
 			in_file_audio = '/home/alex/Documents/Python/multimodal_gesture_recognition/speech_blstm/Testing_set_audio.csv'
-			in_file_skeletal = 'Validation_set_skeletal.csv'
+			in_file_skeletal = '../skeletal_network/Validation_set_skeletal.csv'
 		elif self.test == 'train':
 			in_file_audio = '/home/alex/Documents/Python/multimodal_gesture_recognition/speech_blstm/Training_set_audio_labeled.csv'
-			in_file_skeletal = 'Training_set_skeletal.csv'
-
+			in_file_skeletal = '../skeletal_network/Training_set_skeletal.csv'
+		else:
+			in_file_audio = '../audio_network/Final_set_audio.csv'
+			in_file_skeletal = '../skeletal_network/final_set_skeletal.csv'
 		# Read the inputs.
 		self.df_a = pd.read_csv(in_file_audio, header=None)
 		self.df_s = pd.read_csv(in_file_skeletal)
@@ -104,17 +106,14 @@ class DataGenerator(keras.callbacks.Callback):
 		# Normalize skeletal.
 		elif stream == 'skeletal':
 			data = self.df_s[['lh_v','rh_v','le_v','re_v','lh_dist_rp','rh_dist_rp','lh_hip_d','rh_hip_d','le_hip_d','re_hip_d','lh_shc_d','rh_shc_d','le_shc_d','re_shc_d',
-							'lh_hip_ang','rh_hip_ang','lh_shc_ang','rh_shc_ang','lh_el_ang','rh_el_ang','lh_dir','rh_dir']].as_matrix().astype(float)
+							'lh_hip_ang','rh_hip_ang','lh_shc_ang','rh_shc_ang','lh_el_ang','rh_el_ang']].as_matrix().astype(float)
 
 			norm_data = preprocessing.scale(data)
 
 			norm_df = pd.DataFrame(norm_data, columns=['lh_v','rh_v','le_v','re_v','lh_dist_rp','rh_dist_rp','lh_hip_d','rh_hip_d','le_hip_d','re_hip_d','lh_shc_d','rh_shc_d','le_shc_d','re_shc_d',
-					'lh_hip_ang','rh_hip_ang','lh_shc_ang','rh_shc_ang','lh_el_ang','rh_el_ang','lh_dir','rh_dir'])
+					'lh_hip_ang','rh_hip_ang','lh_shc_ang','rh_shc_ang','lh_el_ang','rh_el_ang'])
 
 			norm_df['file_number'] = self.df_s['file_number']
-
-			if self.test == 'train':
-				norm_df['labels'] = self.df_s['labels']
 
 		return norm_df
 
@@ -165,7 +164,7 @@ class DataGenerator(keras.callbacks.Callback):
 
 			# Skeletal
 			gest_seq_s = vf_s[['lh_v','rh_v','le_v','re_v','lh_dist_rp','rh_dist_rp','lh_hip_d','rh_hip_d','le_hip_d','re_hip_d','lh_shc_d','rh_shc_d','le_shc_d','re_shc_d',
-							'lh_hip_ang','rh_hip_ang','lh_shc_ang','rh_shc_ang','lh_el_ang','rh_el_ang','lh_dir','rh_dir']].as_matrix().astype(float)
+							'lh_hip_ang','rh_hip_ang','lh_shc_ang','rh_shc_ang','lh_el_ang','rh_el_ang']].as_matrix().astype(float)
 			gest_seq_s = sequence.pad_sequences([gest_seq_s], maxlen=self.maxlen, padding='post', truncating='post', dtype='float32')
 			
 			# Save the returned variables.
@@ -245,7 +244,7 @@ def decode_batch(pred_out,f_list):
 		# Filter the probabilities to get the most confident predictions.
 		
 		for p,s in zip(out_prob,out_best):
-			if p < 0.88:
+			if p < 0.97:
 				out_prob.remove(p)
 				out_best.remove(s)
 
@@ -280,7 +279,7 @@ maxlen = 1900
 nb_classes = 22
 nb_epoch = 100
 numfeats_speech = 39
-numfeats_skeletal = 22
+numfeats_skeletal = 20
 
 K.set_learning_phase(0)  # all new operations will be in test mode from now on
 

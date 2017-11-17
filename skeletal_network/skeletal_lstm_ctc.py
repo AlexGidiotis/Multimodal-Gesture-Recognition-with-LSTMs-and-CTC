@@ -65,13 +65,15 @@ class DataGenerator(keras.callbacks.Callback):
 	def load_dataset(self):
 		# The input file path.
 		in_file = 'Training_set_skeletal.csv'
+		train_lab_file = '../training.csv'
 
+		labs = pd.read_csv(train_lab_file)
+		self.labs = labs
 		self.df = pd.read_csv(in_file)
-
 		self.df = self.df[['lh_v','rh_v','le_v','re_v','lh_dist_rp','rh_dist_rp',
 			'lh_hip_d','rh_hip_d','le_hip_d','re_hip_d','lh_shc_d','rh_shc_d',
 			'le_shc_d','re_shc_d','lh_hip_ang','rh_hip_ang','lh_shc_ang',
-			'rh_shc_ang','lh_el_ang','rh_el_ang', 'file_number', 'labels']]
+			'rh_shc_ang','lh_el_ang','rh_el_ang', 'file_number']]
 
 		# Zero mean and unity variance normalization.
 		self.df = self.normalize_data()
@@ -127,7 +129,6 @@ class DataGenerator(keras.callbacks.Callback):
 			'rh_shc_ang','lh_el_ang','rh_el_ang'])
 
 		norm_df['file_number'] = self.df['file_number']
-		norm_df['labels'] = self.df['labels']
 
 		return norm_df
 
@@ -173,10 +174,9 @@ class DataGenerator(keras.callbacks.Callback):
 				truncating='post',
 				dtype='float32')
 			
-			# Create the label vector. Ignores the blanks.
-			lab_seq = vf[vf['labels'] != 0]['labels'].unique().astype('float32')
-			index = np.argwhere(lab_seq==0)
-			lab_seq = np.delete(lab_seq, index)
+			# Create the label vector.
+			lab_seq = self.labs[self.labs['Id'] == file]
+			lab_seq = lab_seq['Sequence'].values
 
 			# If a sequence is not found insert a blank example and pad.
 			if lab_seq.shape[0] == 0:
@@ -189,6 +189,8 @@ class DataGenerator(keras.callbacks.Callback):
 			# Else use the save the returned variables.
 			else:
 				X_data[i, :, :] = gest_seq
+				lab_seq = lab_seq[0].split()
+				lab_seq = np.array([int(lab) for lab in lab_seq]).astype('float32')
 				label_length[i] = lab_seq.shape[0]
 				lab_seq = sequence.pad_sequences([lab_seq],
 					maxlen=(self.absolute_max_sequence_len),
@@ -212,7 +214,6 @@ class DataGenerator(keras.callbacks.Callback):
 				  }
 
 		outputs = {'ctc': np.zeros([size])}  # dummy data for dummy loss function
-
 		return (inputs, outputs)
 
 	# Get the next training batch and update index. Called by the generator.
@@ -262,7 +263,7 @@ minibatch_size = 2
 val_split = 0.2
 maxlen = 1900
 nb_classes = 22
-nb_epoch = 150
+nb_epoch = 500
 numfeats = 20
 
 K.set_learning_phase(1)  # all new operations will be in train mode from now on
@@ -300,7 +301,7 @@ lstm_1 = Bidirectional(LSTM(300, name='blstm_1',
 	recurrent_dropout=0.0,
 	dropout=0.6, 
 	kernel_constraint=maxnorm(3),
-	kernel_initializer='he_uniform',
+	kernel_initializer=uni_initializer,
 	return_sequences=True),
 	merge_mode='concat')(input_noise)
 
@@ -314,7 +315,7 @@ lstm_2 = Bidirectional(LSTM(300,
 	recurrent_dropout=0.0,
 	dropout=0.6,
 	kernel_constraint=maxnorm(3),
-	kernel_initializer='he_uniform',
+	kernel_initializer=uni_initializer,
 	return_sequences=True),
 	merge_mode='concat')(lstm_1)
 
@@ -331,7 +332,7 @@ dropout_1 = Dropout(0.6,
 # Predicts a class probability distribution at every time step.
 inner = Dense(nb_classes,
 	name='dense_1',
-	kernel_initializer='he_uniform')(dropout_1) 
+	kernel_initializer=uni_initializer)(dropout_1) 
 y_pred = Activation('softmax',
 	name='softmax')(inner)
 
@@ -363,6 +364,7 @@ model = Model(input=[input_data, labels, input_length, label_length],
 # Optimizer.
 # Clipping the gradients to have smaller values makes the training smoother.
 adam = Adam(lr=0.0001,
+	decay=1e-5,
 	clipvalue=0.5)
 
 # Resume training.
@@ -375,6 +377,7 @@ if load_previous == 'yes':
 	model.load_weights("sk_ctc_lstm_weights_best.h5")
 
 	adam = Adam(lr=0.0001,
+		decay=1e-5,
 		clipvalue=0.5)
 	print("Loaded model from disk")
 

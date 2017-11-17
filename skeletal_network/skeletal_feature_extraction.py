@@ -277,6 +277,9 @@ if mode == 'train':
 elif mode == 'val':
 	sk_data_file = "validation_data.csv"
 	out_file = "Validation_set_skeletal.csv"
+else:
+	sk_data_file = "final_data.csv"
+	out_file = "final_set_skeletal.csv"
 
 print "Loading data..."
 df = load_data(sk_data_file) 

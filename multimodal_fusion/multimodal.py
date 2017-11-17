@@ -24,6 +24,7 @@ from keras.layers.noise import GaussianNoise
 from keras.regularizers import l1,l2
 from keras.constraints import maxnorm
 from keras import layers
+from keras.initializers import RandomUniform
 
 #====================================================== DATA GENERATOR =================================================================================
 # Data generator that will provide training and testing with data. Works with mini batches of audio feat files.
@@ -69,7 +70,7 @@ class DataGenerator(keras.callbacks.Callback):
 		print 'Loading data...'
 		# The input files.
 		in_file_audio = '/home/alex/Documents/Python/multimodal_gesture_recognition/speech_blstm/Training_set_audio_labeled.csv'
-		in_file_skeletal = 'Training_set_skeletal.csv'
+		in_file_skeletal = '../skeletal_network/Training_set_skeletal.csv'
 		# Read the inputs.
 		self.df_a = pd.read_csv(in_file_audio,
 			header=None)
@@ -138,7 +139,6 @@ class DataGenerator(keras.callbacks.Callback):
 				'rh_hip_ang','lh_shc_ang','rh_shc_ang','lh_el_ang',
 				'rh_el_ang'])
 			norm_df['file_number'] = self.df_s['file_number']
-			norm_df['labels'] = self.df_s['labels']
 
 		return norm_df
 
@@ -334,7 +334,7 @@ minibatch_size = 2
 val_split = 0.2
 maxlen = 1900
 nb_classes = 22
-nb_epoch = 150
+nb_epoch = 500
 numfeats_speech = 39
 numfeats_skeletal = 20
 
@@ -351,10 +351,10 @@ data_gen = DataGenerator(minibatch_size=minibatch_size,
 	nb_classes=nb_classes)
 
 # Load pre-trained uni-modal networks.
-skeletal_model_file = '/home/alex/Documents/Python/multimodal_gesture_recognition/skeletal_pretrain/sk_ctc_lstm_model.json'
-skeletal_weights = '/home/alex/Documents/Python/multimodal_gesture_recognition/skeletal_pretrain/sk_ctc_lstm_weights_best.h5'
-speech_model_file = '/home/alex/Documents/Python/multimodal_gesture_recognition/speech_pretrain/sp_ctc_lstm_model.json'
-speech_weights = '/home/alex/Documents/Python/multimodal_gesture_recognition/speech_pretrain/sp_ctc_lstm_weights_best.h5'
+skeletal_model_file = '../skeletal_network/sk_ctc_lstm_model.json'
+skeletal_weights = '../skeletal_network/sk_ctc_lstm_weights_best.h5'
+speech_model_file = '../audio_network/sp_ctc_lstm_model.json'
+speech_weights = '../audio_network/sp_ctc_lstm_weights_best.h5'
 
 
 json_file = open(skeletal_model_file, 'r')
@@ -373,6 +373,10 @@ speech_model = model_from_json(speech_model_json)
 speech_model.load_weights(speech_weights)
 
 #===================================================== BUILD THE MODEL =================================================================================
+uni_initializer = RandomUniform(minval=-0.05,
+	maxval=0.05,
+	seed=47)
+
 # Shape of the network inputs.
 input_shape_a = (maxlen, numfeats_speech)
 input_shape_s = (maxlen, numfeats_skeletal)
@@ -464,7 +468,7 @@ lstm_3 = Bidirectional(LSTM(100,
 	recurrent_dropout=0.0,
 	dropout=0.5,
 	kernel_constraint=maxnorm(3),
-	kernel_initializer='glorot_uniform',
+	kernel_initializer=uni_initializer,
 	return_sequences=True),
 	merge_mode='concat')(merged)
 
@@ -476,7 +480,7 @@ dropout_3 = Dropout(0.6,
 # Block 4
 inner = Dense(nb_classes,
 	name='dense_1',
-	kernel_initializer='glorot_uniform')(dropout_3)
+	kernel_initializer=uni_initializer)(dropout_3)
 y_pred = Activation('softmax',
 	name='softmax')(inner)
 
@@ -511,7 +515,8 @@ model = Model(input=[input_data_a,input_data_s, labels, input_length, label_leng
 
 # Optimizer.
 adam = Adam(lr=0.0001,
-	clipvalue=0.5)
+	clipvalue=0.5,
+	decay=1e-5)
 
 
 # the loss calc occurs elsewhere, so use a dummy lambda func for the loss
@@ -520,7 +525,7 @@ model.compile(loss={'ctc': lambda y_true, y_pred: y_pred},
 
 # Early stopping to avoid overfitting
 earlystopping = EarlyStopping(monitor='val_loss',
-	patience=15,
+	patience=20,
 	verbose=1)
 # Checkpoint to save the weights with the best validation accuracy.
 filepath="multimodal_ctc_lstm_weights_best.h5"
