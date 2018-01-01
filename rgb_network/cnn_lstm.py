@@ -137,7 +137,6 @@ class DataGenerator(callbacks.Callback):
 			batch = file_list[index:]
 
 		size = len(batch)
-
 		# Initialize the variables to be returned.
 		X_data = np.ones([size, self.maxlen, self.img_dim, self.img_dim, 1],
 			dtype='float32')
@@ -228,6 +227,14 @@ class DataGenerator(callbacks.Callback):
 			yield ret
 
 
+	def on_epoch_end(self, epoch, logs={}):
+		self.train_index = 0
+		self.val_index = 0
+
+		random.shuffle(self.train_list)
+		random.shuffle(self.val_list)
+
+
 # the actual loss calc occurs here despite it not being
 # an internal Keras loss function
 def ctc_lambda_func(args):
@@ -254,97 +261,75 @@ def build_net():
 		shape=input_shape)
 
 	# CNN Block 1
-	drop1 = TimeDistributed(Dropout(0.1),
+	drop1 = TimeDistributed(Dropout(0.0),
 		name='drop_1')(input_layer)
 	conv1 = TimeDistributed(Convolution2D(16, (5,5),
 		activation='relu', 
 		padding='valid',
-		kernel_initializer='lecun_uniform'),
+		kernel_initializer=uni_initializer),
 		name='conv_1')(drop1)
-	'''
-	conv2 = TimeDistributed(Convolution2D(16, (5,5),
-		activation='relu', 
-		padding='valid',
-		kernel_initializer='lecun_uniform'),
-		name='conv_2')(conv1)
-	'''
-	bn_1 = TimeDistributed(BatchNormalization(),
-		name='bn_1')(conv1)
+
 	pool1 = TimeDistributed(MaxPooling2D(pool_size=(2, 2)),
-		name='max_pool_1')(bn_1)
+		name='max_pool_1')(conv1)
 
 	# CNN Block 2
-	drop2 = TimeDistributed(Dropout(0.1),
+	drop2 = TimeDistributed(Dropout(0.0),
 		name='drop_2')(pool1)
 	conv3 = TimeDistributed(Convolution2D(32, (5,5),
 		activation='relu', 
 		padding='valid',
-		kernel_initializer='lecun_uniform'),
+		kernel_initializer=uni_initializer),
 		name='conv_3')(drop2)
-	'''
-	conv4 = TimeDistributed(Convolution2D(32, (3,3),
-		activation='relu', 
-		padding='valid',
-		kernel_initializer='lecun_uniform'),
-		name='conv_4')(conv3)
-	'''
-	bn_2 = TimeDistributed(BatchNormalization(),
-		name='bn_2')(conv3)
+
 	pool2 = TimeDistributed(MaxPooling2D(pool_size=(2, 2)),
-		name='max_pool_2')(bn_2)
+		name='max_pool_2')(conv3)
 
 	# CNN Block 3
-	drop3 = TimeDistributed(Dropout(0.1),
+	drop3 = TimeDistributed(Dropout(0.0),
 		name='drop_3')(pool2)
 	conv5 = TimeDistributed(Convolution2D(48, (4,4),
 		activation='relu', 
 		padding='valid',
-		kernel_initializer='lecun_uniform'),
+		kernel_initializer=uni_initializer),
 		name='conv_5')(drop3)
-	'''
-	conv6 = TimeDistributed(Convolution2D(48, (3,3),
-		activation='relu', 
-		padding='valid',
-		kernel_initializer='lecun_uniform'),
-		name='conv_6')(conv5)
-	'''
-	bn_3 = TimeDistributed(BatchNormalization(),
-		name='bn_3')(conv5)
+
 	pool3 = TimeDistributed(MaxPooling2D(pool_size=(2, 2)),
-		name='max_pool_3')(bn_3)
+		name='max_pool_3')(conv5)
 
 
 	flat = TimeDistributed(Flatten(),name='flatten')(pool3)
 	
 	# LSTM Block 1
-	lstm_1 = Bidirectional(LSTM(256, 
+	lstm_1 = Bidirectional(LSTM(500, 
 		name='blstm_1', 
 		activation='tanh', 
 		recurrent_activation='hard_sigmoid', 
 		recurrent_dropout=0.0, 
-		dropout=0.1, 
+		dropout=0.0, 
+		kernel_constraint=maxnorm(3),
 		kernel_initializer=uni_initializer, 
 		return_sequences=True), 
 		merge_mode='concat')(flat)
-	#lstm_1 = BatchNormalization(name='bn_5')(lstm_1)
-	'''
+	
 	# LSTM Block 2
-	lstm_2 = Bidirectional(LSTM(300,
+	lstm_2 = Bidirectional(LSTM(500,
 		name='blstm_2', 
 		activation='tanh', 
 		recurrent_activation='hard_sigmoid', 
 		recurrent_dropout=0.0, 
-		dropout=0.2, 
+		dropout=0.0, 
 		kernel_initializer=uni_initializer, 
 		return_sequences=True), 
 		merge_mode='concat')(lstm_1)
-	lstm_2 = BatchNormalization(name='bn_6')(lstm_2)
+	
 	res_block_1 = add([lstm_1, lstm_2],
 		name='residual_1')
-	'''
+	
 	# Dense Block
-	drop4 = Dropout(0.1,
-		name='drop_4')(lstm_1)
+	
+	drop4 = Dropout(0.0,
+		name='drop_4')(res_block_1)
+
 	# Predicts a class probability distribution at every time step.
 	inner = Dense(nb_classes,
 		name='dense_1',
@@ -377,8 +362,8 @@ def build_net():
 		outputs=[loss_out])
 	# Optimizer.
 	# Clipping the gradients to have smaller values makes the training smoother.
-	adam = Adam(lr=0.003,
-		decay=1e-5)
+	adam = Adam(lr=0.0001,
+		clipvalue=0.5)
 	# the loss calc occurs elsewhere, so use a dummy lambda func for the loss
 	model.compile(loss={'ctc': lambda y_true, y_pred: y_pred},
 		optimizer=adam)
@@ -401,8 +386,8 @@ def load_model():
 	# load weights into new model
 	model.load_weights(stamp + '.h5')
 
-	adam = Adam(lr=0.001,
-		decay=1e-5)
+	adam = Adam(lr=0.0001,
+		clipvalue=0.5)
 	print("Loaded model from disk")
 
 	y_pred = model.get_layer('softmax').output
@@ -459,6 +444,7 @@ plateau_callback = ReduceLROnPlateau(monitor='loss',
 	min_lr=0.00005,
 	verbose=1,
 	cooldown=2)
+
 
 print 'Start training.'
 start_time = time.time()
