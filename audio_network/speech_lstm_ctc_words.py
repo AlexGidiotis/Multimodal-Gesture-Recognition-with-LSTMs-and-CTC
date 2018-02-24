@@ -67,7 +67,12 @@ class DataGenerator(keras.callbacks.Callback):
 	# Column 39 is the audio file number and column 40 is the label column.
 	def load_dataset(self):
 		# THe audio data path.
-		in_file = '/home/alex/Documents/Python/multimodal_gesture_recognition/speech_blstm/Training_set_audio_labeled.csv'
+
+		in_file = 'Training_set_audio.csv'
+		train_lab_file = '../training.csv'
+
+		labs = pd.read_csv(train_lab_file)
+		self.labs = labs
 
 		self.df = pd.read_csv(in_file,
 			header=None)
@@ -76,12 +81,11 @@ class DataGenerator(keras.callbacks.Callback):
 		self.df = self.normalize_data()
 
 		# Create and shuffle file list.
-		# Column 39 is the file number.
-		file_list = self.df[39].unique().tolist()
+		file_list = self.df['file_number'].unique().tolist()
 
 		random.seed(10)
 		random.shuffle(file_list)
-
+		
 		# SPlit to training and validation set.
 		split_point = int(len(file_list) * (1 - self.val_split))
 		self.train_list, self.val_list = file_list[:split_point], file_list[split_point:]
@@ -112,14 +116,13 @@ class DataGenerator(keras.callbacks.Callback):
 	# Normalize the data to have zero mean and unity variance.
 	def normalize_data(self):
 		# Column 39 has the filename and column 40 the labels.
-		data = self.df.drop([39,40], axis=1).as_matrix().astype(float)
+		data = self.df.drop([39,40,41], axis=1).as_matrix().astype(float)
 
 		norm_data = preprocessing.scale(data)
 
 		norm_df = pd.DataFrame(norm_data)
 
-		norm_df[39] = self.df[39]
-		norm_df[40] = self.df[40]
+		norm_df['file_number'] = self.df[41]
 
 		return norm_df
 
@@ -187,11 +190,13 @@ class DataGenerator(keras.callbacks.Callback):
 		# Read batch.
 		for i in range(len(batch)):
 			file = batch[i]
-			vf = self.df[self.df[39] == file]
+			vf = self.df[self.df['file_number'] == file]
+
+
 			# Downsample by 5 the audio.
 			vf = vf.iloc[::5, :].reset_index(drop=True)
 			# SElect and pad data sequence to max length.
-			gest_seq = vf.drop([39,40],axis=1).as_matrix().astype(float)
+			gest_seq = vf.drop(['file_number'],axis=1).as_matrix().astype(float)
 			gest_seq = sequence.pad_sequences([gest_seq],
 				maxlen=self.maxlen,
 				padding='post',
@@ -199,9 +204,9 @@ class DataGenerator(keras.callbacks.Callback):
 				dtype='float32')
 			
 			# Create the label vector. Ignores the blanks.
-			lab_seq = vf[vf[40] != 0][40].unique().astype('float32')
-			index = np.argwhere(lab_seq==0)
-			lab_seq = np.delete(lab_seq, index)
+			lab_seq = self.labs[self.labs['Id'] == file]
+			lab_seq = np.array([int(lab) for lab in lab_seq['Sequence'].values[0].split()]).astype('float32')
+
 			lab_seq = self.sent_2_words(lab_seq)
 
 			# Insert oovs between gesture labels. (did not improve things)

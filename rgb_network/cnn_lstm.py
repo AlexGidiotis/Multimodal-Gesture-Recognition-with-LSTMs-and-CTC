@@ -22,7 +22,6 @@ from keras.preprocessing import sequence
 from keras.models import model_from_json
 
 
-#========================================================= Global variables =================================================
 #gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.8)
 #sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
 
@@ -39,7 +38,6 @@ val_split = 0.2
 nb_epoch = 500
 
 
-#=========================================================== Definitions ====================================================
 # The data generator will yield batches of data to the training algorithm.
 class DataGenerator(callbacks.Callback):
 
@@ -300,7 +298,7 @@ def build_net():
 	flat = TimeDistributed(Flatten(),name='flatten')(pool3)
 	
 	# LSTM Block 1
-	lstm_1 = Bidirectional(LSTM(500, 
+	lstm_1 = Bidirectional(LSTM(512, 
 		name='blstm_1', 
 		activation='tanh', 
 		recurrent_activation='hard_sigmoid', 
@@ -312,12 +310,13 @@ def build_net():
 		merge_mode='concat')(flat)
 	
 	# LSTM Block 2
-	lstm_2 = Bidirectional(LSTM(500,
+	lstm_2 = Bidirectional(LSTM(512,
 		name='blstm_2', 
 		activation='tanh', 
 		recurrent_activation='hard_sigmoid', 
 		recurrent_dropout=0.0, 
 		dropout=0.0, 
+		kernel_constraint=maxnorm(3),
 		kernel_initializer=uni_initializer, 
 		return_sequences=True), 
 		merge_mode='concat')(lstm_1)
@@ -398,7 +397,6 @@ def load_model():
 	return model
 
 
-#========================================================== Main function ===================================================
 mode = 'train'
 load_previous = raw_input('Type yes/no if you want to load previous model: ')
 

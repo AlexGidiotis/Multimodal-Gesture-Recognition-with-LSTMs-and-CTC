@@ -163,6 +163,7 @@ class DataGenerator(keras.callbacks.Callback):
 			file = batch[i]
 			vf = self.df[self.df['file_number'] == file]
 			
+			
 			# SElect and pad data sequence to max length.
 			gest_seq = vf[['lh_v','rh_v','le_v','re_v','lh_dist_rp',
 			'rh_dist_rp','lh_hip_d','rh_hip_d','le_hip_d','re_hip_d',
