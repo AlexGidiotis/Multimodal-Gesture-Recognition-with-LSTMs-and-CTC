@@ -107,6 +107,7 @@ if __name__ == '__main__':
 	This routine expands the training set with a samle from the validation set.
 	This is consistently done for both the audio, skeletal and label data.
 	"""
+	
 	train_file_sample, val_file_sample = sample_validation_set()
 	print len(train_file_sample), len(val_file_sample)
 	print train_file_sample
