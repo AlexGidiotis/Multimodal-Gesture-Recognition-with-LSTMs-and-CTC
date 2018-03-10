@@ -300,7 +300,7 @@ loaded_model_json = json_file.read()
 json_file.close()
 loaded_model = model_from_json(loaded_model_json)
 # load weights into new model
-loaded_model.load_weights("multimodal_ctc_blstm_weights.h5")
+loaded_model.load_weights("multimodal_ctc_lstm_weights_best.h5")
 print("Loaded model from disk")
 
 y_pred = loaded_model.get_layer('softmax').output

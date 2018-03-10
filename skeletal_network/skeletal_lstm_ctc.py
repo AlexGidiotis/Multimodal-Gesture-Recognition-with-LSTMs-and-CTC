@@ -237,6 +237,13 @@ class DataGenerator(keras.callbacks.Callback):
 
 	# Save model and weights on epochs end.
 	def on_epoch_end(self, epoch, logs={}):
+		self.train_index = 0
+		self.val_index = 0
+
+		random.shuffle(self.train_list)
+		random.shuffle(self.val_list)
+
+
 		model_json = self.model.to_json()
 		with open("sk_ctc_lstm_model.json", "w") as json_file:
 			json_file.write(model_json)
@@ -408,7 +415,7 @@ model.fit_generator(generator=data_gen.next_train(),
 	epochs=nb_epoch,
 	validation_data=data_gen.next_val(),
 	validation_steps=(data_gen.get_size(train=False)/minibatch_size),
-	callbacks=[earlystopping, checkpoint, data_gen])
+	callbacks=[checkpoint, data_gen])
 
 #================================================================================================================================
 

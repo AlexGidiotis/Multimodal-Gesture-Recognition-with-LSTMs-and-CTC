@@ -23,8 +23,10 @@ class DataGenerator(keras.callbacks.Callback):
 		minibatch_size,
 		numfeats_skeletal,
 		numfeats_speech,
-		maxlen,val_split,
+		maxlen,
 		nb_classes,
+		dataset,
+		val_split=0.2,
 		absolute_max_sequence_len=35):
 
 		# Currently is only 2 files per batch.
@@ -47,7 +49,14 @@ class DataGenerator(keras.callbacks.Callback):
 		# Blank model to use.
 		self.blank_label = np.array([self.nb_classes - 1])
 
-		
+		self.dataset = dataset
+
+		if self.dataset == 'train':
+			self.in_audio_dir = '../data/train_audio'
+			self.in_file_skeletal = '../data/Training_set_skeletal.csv'
+		elif self.dataset == 'val':
+			self.in_audio_dir = '../data/val_audio'
+			self.in_file_skeletal = '../data/Validation_set_skeletal.csv'
 
 		self.load_dataset()
 
@@ -57,23 +66,26 @@ class DataGenerator(keras.callbacks.Callback):
 	def load_dataset(self):
 		print 'Loading data...'
 
-		self.in_audio_dir = '../data/train_audio'
-		in_file_skeletal = '../skeletal_network/Training_set_skeletal.csv'
+		if self.dataset == 'train':
+			train_lab_file = '../data/training_oov.csv'
+		elif self.dataset == 'val':
+			train_lab_file = '../data/validation.csv'
 
-		train_lab_file = '../data/training_oov.csv'
 		
 		labs = pd.read_csv(train_lab_file)
 		self.labs = labs
 
 
-		self.df_s = pd.read_csv(in_file_skeletal)
+		self.df_s = pd.read_csv(self.in_file_skeletal)
 		self.df_s = self.normalize_data()
 
 
-		file_list = os.listdir(self.in_dir)
+		file_list = os.listdir(self.in_audio_dir)
 		file_list = sorted([int(re.findall('audio_(\d+).csv',file_name)[0]) for file_name in file_list])
-		random.seed(10)
-		random.shuffle(file_list)
+
+		if self.dataset == 'train':
+			random.seed(10)
+			random.shuffle(file_list)
 
 
 		split_point = int(len(file_list) * (1 - self.val_split))
@@ -156,7 +168,6 @@ class DataGenerator(keras.callbacks.Callback):
 		# Read batch.
 		for i in range(len(batch)):
 			file = batch[i]
-
 			audio_file_name = 'audio_' + str(file) + '.csv'
 			audio_file_path = os.path.join(self.in_audio_dir,audio_file_name)
 
@@ -181,13 +192,14 @@ class DataGenerator(keras.callbacks.Callback):
 			'rh_dist_rp','lh_hip_d','rh_hip_d','le_hip_d','re_hip_d',
 			'lh_shc_d','rh_shc_d','le_shc_d','re_shc_d','lh_hip_ang',
 			'rh_hip_ang','lh_shc_ang','rh_shc_ang','lh_el_ang','rh_el_ang']].as_matrix().astype(float)
+
 			gest_seq_s = sequence.pad_sequences([gest_seq_s],
 				maxlen=self.maxlen,
 				padding='post',
 				truncating='post',
 				dtype='float32')
-			
 
+			
 			lab_seq = self.labs[self.labs['Id'] == file]
 			lab_seq = np.array([int(lab) for lab in lab_seq['Sequence'].values[0].split()]).astype('float32')
 
@@ -198,6 +210,7 @@ class DataGenerator(keras.callbacks.Callback):
 					maxlen=(self.absolute_max_sequence_len),
 					padding='post',
 					value=-1)
+
 				
 				labels_s[i, :] = lab_seq
 				labels_a[i, :] = lab_seq
@@ -206,7 +219,13 @@ class DataGenerator(keras.callbacks.Callback):
 			# Else use the save the returned variables.
 			else:
 				X_data_a[i, :, :] = gest_seq_a
-				X_data_s[i, :, :] = gest_seq_s
+
+				# Ignore empty examples
+				try:
+					X_data_s[i, :, :] = gest_seq_s
+				except:
+					print 'blank'
+
 				label_length_a[i] = lab_seq.shape[0]
 				label_length_s[i] = lab_seq.shape[0]
 				lab_seq = sequence.pad_sequences([lab_seq],
@@ -268,6 +287,13 @@ class DataGenerator(keras.callbacks.Callback):
 	# Save model and weights on epochs end.
 	# Callback at the end of each epoch.
 	def on_epoch_end(self, epoch, logs={}):
+		self.train_index = 0
+		self.val_index = 0
+
+		random.shuffle(self.train_list)
+		random.shuffle(self.val_list)
+
+		
 		model_json = self.model.to_json()
 		with open("multimodal_ctc_blstm_model.json", "w") as json_file:
 			json_file.write(model_json)

@@ -24,8 +24,9 @@ class DataGenerator(keras.callbacks.Callback):
 		minibatch_size,
 		numfeats,
 		maxlen,
-		val_split,
 		nb_classes,
+		dataset,
+		val_split=0.2,
 		absolute_max_sequence_len=150):
 		"""
 		"""
@@ -40,7 +41,12 @@ class DataGenerator(keras.callbacks.Callback):
 		self.nb_classes = nb_classes
 		self.blank_label = np.array([self.nb_classes - 1])
 
-		self.in_dir = '../data/train_audio'
+		self.dataset = dataset
+
+		if self.dataset == 'train':
+			self.in_dir = '../data/train_audio'
+		elif self.dataset == 'val':
+			self.in_dir = '../data/val_audio'
 
 		self.build_dataset()
 
@@ -50,8 +56,10 @@ class DataGenerator(keras.callbacks.Callback):
 	def build_dataset(self):
 		"""
 		"""
-
-		train_lab_file = '../data/training_oov.csv'
+		if self.dataset == 'train':
+			train_lab_file = '../data/training_oov.csv'
+		elif self.dataset == 'val':
+			train_lab_file = '../data/validation.csv'
 
 		labs = pd.read_csv(train_lab_file)
 		self.labs = labs
@@ -59,28 +67,33 @@ class DataGenerator(keras.callbacks.Callback):
 
 		file_list = os.listdir(self.in_dir)
 		file_list = sorted([int(re.findall('audio_(\d+).csv',file_name)[0]) for file_name in file_list])
-		random.seed(10)
-		random.shuffle(file_list)
-		
 
-		split_point = int(len(file_list) * (1 - self.val_split))
-		self.train_list, self.val_list = file_list[:split_point], file_list[split_point:]
-		self.train_size = len(self.train_list)
-		self.val_size = len(self.val_list)
+		if self.dataset == 'train':
+			random.seed(10)
+			random.shuffle(file_list)
+			
+
+			split_point = int(len(file_list) * (1 - self.val_split))
+			self.train_list, self.val_list = file_list[:split_point], file_list[split_point:]
+			self.train_size = len(self.train_list)
+			self.val_size = len(self.val_list)
 
 
-		#Make sure that train and validation lists have an even length to avoid mini-batches of size 1
-		train_mod_by_batch_size = self.train_size % self.minibatch_size
+			#Make sure that train and validation lists have an even length to avoid mini-batches of size 1
+			train_mod_by_batch_size = self.train_size % self.minibatch_size
 
-		if train_mod_by_batch_size != 0:
-			del self.train_list[-train_mod_by_batch_size:]
-			self.train_size -= train_mod_by_batch_size
+			if train_mod_by_batch_size != 0:
+				del self.train_list[-train_mod_by_batch_size:]
+				self.train_size -= train_mod_by_batch_size
 
-		val_mod_by_batch_size = self.val_size % self.minibatch_size
+			val_mod_by_batch_size = self.val_size % self.minibatch_size
 
-		if val_mod_by_batch_size != 0:
-			del self.val_list[-val_mod_by_batch_size:]
-			self.val_size -= val_mod_by_batch_size
+			if val_mod_by_batch_size != 0:
+				del self.val_list[-val_mod_by_batch_size:]
+				self.val_size -= val_mod_by_batch_size
+		else:
+			self.val_list = file_list
+			self.val_size = len(self.val_list)
 
 		return
 
@@ -93,6 +106,13 @@ class DataGenerator(keras.callbacks.Callback):
 			return self.train_size
 		else:
 			return self.val_size
+
+
+	def get_file_list(self,train):
+		if train:
+			return self.train_list
+		else:
+			return self.val_list
 
 
 	# This method converts label sequences to word level label sequences.
@@ -247,6 +267,12 @@ class DataGenerator(keras.callbacks.Callback):
 	def on_epoch_end(self, epoch, logs={}):
 		"""
 		"""
+		self.train_index = 0
+		self.val_index = 0
+
+		random.shuffle(self.train_list)
+		random.shuffle(self.val_list)
+
 
 		model_json = self.model.to_json()
 		with open("sp_ctc_lstm_model.json", "w") as json_file:
