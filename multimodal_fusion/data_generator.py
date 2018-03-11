@@ -88,30 +88,41 @@ class DataGenerator(keras.callbacks.Callback):
 			random.shuffle(file_list)
 
 
-		split_point = int(len(file_list) * (1 - self.val_split))
-		self.train_list, self.val_list = file_list[:split_point], file_list[split_point:]
-		self.train_size = len(self.train_list)
-		self.val_size = len(self.val_list)
+			split_point = int(len(file_list) * (1 - self.val_split))
+			self.train_list, self.val_list = file_list[:split_point], file_list[split_point:]
+			self.train_size = len(self.train_list)
+			self.val_size = len(self.val_list)
 
 
-	#Make sure that train and validation lists have an even length to avoid mini-batches of size 1
-		train_mod_by_batch_size = self.train_size % self.minibatch_size
-		if train_mod_by_batch_size != 0:
-			del self.train_list[-train_mod_by_batch_size:]
-			self.train_size -= train_mod_by_batch_size
-		val_mod_by_batch_size = self.val_size % self.minibatch_size
-		if val_mod_by_batch_size != 0:
-			del self.val_list[-val_mod_by_batch_size:]
-			self.val_size -= val_mod_by_batch_size
-	
+			#Make sure that train and validation lists have an even length to avoid mini-batches of size 1
+			train_mod_by_batch_size = self.train_size % self.minibatch_size
+			if train_mod_by_batch_size != 0:
+				del self.train_list[-train_mod_by_batch_size:]
+				self.train_size -= train_mod_by_batch_size
+			val_mod_by_batch_size = self.val_size % self.minibatch_size
+			if val_mod_by_batch_size != 0:
+				del self.val_list[-val_mod_by_batch_size:]
+				self.val_size -= val_mod_by_batch_size
+		else:
+			self.val_list = file_list
+			self.val_size = len(self.val_list)
 
-	# Return sizes.
-	# Called in order to get the training and validation set sizes.
+
 	def get_size(self,train):
+		"""
+		"""
+
 		if train:
 			return self.train_size
 		else:
 			return self.val_size
+
+
+	def get_file_list(self,train):
+		if train:
+			return self.train_list
+		else:
+			return self.val_list
 
 
 	# Normalize the data to have zero mean and unity variance.
