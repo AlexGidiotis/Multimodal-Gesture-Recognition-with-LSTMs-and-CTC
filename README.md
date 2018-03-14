@@ -26,6 +26,8 @@ This project was built for the ChaLearn 2013 dataset. We trained and tested the 
 
 This model achieves 94% accuracy on the test set of the ChaLearn 2013 challenge.
 
+## Usage
+
 In order to train the models provided here you need to preprocess the data:
 1) MFCC features need to be extracted from the audio .wav files. We used 13 MFCC features as well as the first and second order derivatives (total 39 features). We used the HTK toolkit to extract the features. Here we just provide the configuration file for HCopy (the feature extraction tool for HTK). If you want to use HTK for this purpose you can find it here http://htk.eng.cam.ac.uk/
 
