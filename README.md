@@ -5,7 +5,7 @@ We used keras and tensorflow to build our networks.
 
 This project was built for the ChaLearn 2013 dataset. We trained and tested the model using the dataset of the challenge. The data can be downloaded here. http://sunai.uoc.edu/chalearn/#tabs-2 
 
-This model achieves 85% accuracy on the test set of the ChaLearn 2013 challenge.
+This model achieves 94% accuracy on the test set of the ChaLearn 2013 challenge.
 
 In order to train the models provided here you need to preprocess the data:
 1) MFCC features need to be extracted from the audio .wav files. We used 13 MFCC features as well as the first and second order derivatives (total 39 features). We used the HTK toolkit to extract the features. Here we just provide the configuration file for HCopy (the feature extraction tool for HTK). If you want to use HTK for this purpose you can find it here http://htk.eng.cam.ac.uk/
@@ -20,24 +20,25 @@ In order to train the models provided here you need to preprocess the data:
 	
 	c) skeletal_feature_extraction.py
 
-4) Now you are ready to train the skeletal lstm network.
+4) Run util/mix_data.py to mix some of the dev data to the training set.
 
-5) Once both networks are trained you can train the multimodal fusion network.
+5) Now you are ready to train the skeletal lstm network.
 
-6) Use the sequence_decoding.py script to evaluate the trained model with test data.
+6) Once both networks are trained you can train the multimodal fusion network.
 
-The training of the complete system takes approximately 80 hours in an nvidia 1060 gtx.
+7) Use the sequence_decoding.py script to evaluate the trained model with test data.
 
-Dependencies:
+The training of the complete system takes approximately 100 hours in an nvidia 1060 gtx.
 
-1) numpy
+## Requirements
 
-2) pandas
+- Python
+- NumPy
+- Pandas
+- SciPy
+- OpenCV
+- scikit-learn
+- [Tensorflow](https://github.com/tensorflow/tensorflow)
+- [Keras](https://github.com/fchollet/keras)
 
-3) tensorflow
-
-4) keras
-
-5) sklearn
-
-6) scipy
+Run `pip install -r requirements.txt` to install the requirements. 

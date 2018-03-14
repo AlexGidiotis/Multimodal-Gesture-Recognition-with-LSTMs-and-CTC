@@ -57,6 +57,9 @@ class DataGenerator(keras.callbacks.Callback):
 		elif self.dataset == 'val':
 			self.in_audio_dir = '../data/val_audio'
 			self.in_file_skeletal = '../data/Validation_set_skeletal.csv'
+		elif self.dataset == 'final':
+			self.in_audio_dir = '../data/final_audio'
+			self.in_file_skeletal = '../data/final_set_skeletal.csv'
 
 		self.load_dataset()
 
@@ -70,6 +73,9 @@ class DataGenerator(keras.callbacks.Callback):
 			train_lab_file = '../data/training_oov.csv'
 		elif self.dataset == 'val':
 			train_lab_file = '../data/validation.csv'
+		elif self.dataset == 'final':
+			train_lab_file = '../data/validation.csv'
+
 
 		
 		labs = pd.read_csv(train_lab_file)
@@ -211,9 +217,12 @@ class DataGenerator(keras.callbacks.Callback):
 				dtype='float32')
 
 			
-			lab_seq = self.labs[self.labs['Id'] == file]
-			lab_seq = np.array([int(lab) for lab in lab_seq['Sequence'].values[0].split()]).astype('float32')
-
+			# THe final set does not need labels since it's meant for testing.
+			if self.dataset != 'final':
+				lab_seq = self.labs[self.labs['Id'] == file]
+				lab_seq = np.array([int(lab) for lab in lab_seq['Sequence'].values[0].split()]).astype('float32')
+			else:
+				lab_seq = np.array([0])
 
 			# If a sequence is not found insert a blank example and pad.
 			if lab_seq.shape[0] == 0:

@@ -11,6 +11,9 @@ skeletal_val_data = '../skeletal_network/Validation_set_skeletal.csv'
 train_labs = '../training.csv'
 val_labs = '../validation.csv'
 
+audio_final_data = '../audio_network/Final_set_audio.csv'
+skeletal_final_data = '../skeletal_network/final_set_skeletal.csv'
+
 
 def sample_validation_set():
 	"""
@@ -101,6 +104,28 @@ def mix_labels(train_file_list,
 	return train_lab_df, val_lab_df
 
 
+def process_test_set():
+	"""
+	"""
+	df = pd.read_csv(audio_final_data)
+
+	out_dir = '../data/final_audio'
+
+	for i,file_id in enumerate(df['file_number'].unique()):
+		if i % 10 == 0:
+			print i
+
+		vf = df[df['file_number'] == file_id]
+
+		out_file_name = 'audio_' + str(file_id) + '.csv'
+		out_file = os.path.join(out_dir,out_file_name)
+
+		vf.to_csv(out_file,index=False)
+
+	return
+
+
+
 
 if __name__ == '__main__':
 	"""
@@ -149,3 +174,5 @@ if __name__ == '__main__':
 
 	train_skeletal_df.to_csv('../data/Training_set_skeletal.csv',index=False)
 	val_skeletal_df.to_csv('../data/Validation_set_skeletal.csv',index=False)
+	
+	process_test_set()

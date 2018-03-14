@@ -30,7 +30,10 @@ from data_generator import DataGenerator
 from losses import ctc_lambda_func
 
 
-def layer_trainable(l, freeze, verbose=False, bidir_fix=True):
+def layer_trainable(l,
+	freeze,
+	verbose=False,
+	bidir_fix=True):
 	"""
 	Freeze the Bidirectional Layers
 	The Bidirectional wrapper is buggy and does not support freezing. 

@@ -43,7 +43,7 @@ def decode_batch(pred_out,f_list):
 		# Filter the probabilities to get the most confident predictions.
 		
 		for p,s in zip(out_prob,out_best):
-			if p < 0.8:
+			if p < 0.5:
 				out_prob.remove(p)
 				out_best.remove(s)
 
@@ -78,7 +78,7 @@ if __name__ == '__main__':
 	numfeats_speech = 39
 	numfeats_skeletal = 20
 
-	K.set_learning_phase(0)  # all new operations will be in test mode from now on
+	K.set_learning_phase(0)
 
 	dataset = raw_input('select train or val: ')
 
@@ -89,20 +89,17 @@ if __name__ == '__main__':
 		nb_classes=nb_classes,
 		dataset=dataset)
 
-	# Shape of the network inputs.
+
 	input_shape_a = (maxlen, numfeats_speech)
 	input_shape_s = (maxlen, numfeats_skeletal)
-
-	# Input layers for the audio and skeletal.
 	input_data_a = Input(name='the_input_audio', shape=input_shape_a, dtype='float32')
 	input_data_s = Input(name='the_input_skeletal', shape=input_shape_s, dtype='float32')
 
-	# load json and create model
+
 	json_file = open('multimodal_ctc_blstm_model.json', 'r')
 	loaded_model_json = json_file.read()
 	json_file.close()
 	loaded_model = model_from_json(loaded_model_json)
-	# load weights into new model
 	loaded_model.load_weights("multimodal_ctc_lstm_weights_best.h5")
 	print("Loaded model from disk")
 
@@ -111,10 +108,10 @@ if __name__ == '__main__':
 	input_length = Input(name='input_length', shape=[1], dtype='int64')
 	label_length = Input(name='label_length', shape=[1], dtype='int64')
 
-	# so CTC loss is implemented in a lambda layer
 	loss_out = Lambda(ctc_lambda_func, output_shape=(1,), name="ctc")([y_pred, labels, input_length, label_length])
 
 	rmsprop = RMSprop(lr=0.001, clipnorm=5)
+
 	# the loss calc occurs elsewhere, so use a dummy lambda func for the loss
 	loaded_model.compile(loss={'ctc': lambda y_true, y_pred: y_pred}, optimizer=rmsprop)
 
