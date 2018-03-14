@@ -1,7 +1,26 @@
 # Multimodal-Gesture-Recognition-with-LSTMs-and-CTC
+
+## Overview
+
 An end-to-end system that performs temporal recognition of gesture sequences using speech and skeletal input. The model combines two LSTM networks with a CTC output layer that spot and classify gestures from two continuous streams.
 
-We used keras and tensorflow to build our networks.
+The basic modules of the model are two bidirectional LSTMs. The first extracts features from speech and the second from skeletal data. Then another bidirectional LSTM combines the uni-modal features and performs the gesture recognition.
+
+Here we provide code for:
+
+	a) A BLSTM network for speech recognition.
+
+	b) A BLSTM network for skeletal recognition.
+
+	c) A BLSTM network that fuses the two uni-modal networks.
+
+	d) An implementation of the CTC loss output.
+
+	e) Decoders for the different networks.
+
+	f) Sample code for skeletal and speech feature extraction.
+
+We used keras and tensorflow to build our model.
 
 This project was built for the ChaLearn 2013 dataset. We trained and tested the model using the dataset of the challenge. The data can be downloaded here. http://sunai.uoc.edu/chalearn/#tabs-2 
 
