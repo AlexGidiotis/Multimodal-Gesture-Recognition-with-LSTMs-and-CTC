@@ -1,4 +1,7 @@
 # Multimodal-Gesture-Recognition-with-LSTMs-and-CTC
+This repository contains code for my diploma thesis [MULTIMODAL GESTURE
+RECOGNITION WITH THE USE OF
+DEEP LEARNING](https://core.ac.uk/download/pdf/159408166.pdf).
 
 ## Overview
 
